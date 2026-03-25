@@ -1,6 +1,6 @@
 # RNAival
 
-Python based program for the identification of effective siRNAs and the evaluaiton of effective dsRNAs.
+Python-based program for the identification of effective siRNAs and the evaluation of effective dsRNAs.
 
 ## Requirements
 Linux, Mac or a WSL-capable Windows version
@@ -9,7 +9,7 @@ Linux, Mac or a WSL-capable Windows version
 ```
 bash install.sh
 ```
-The installer will install miniforge into ~/RNAival_Dependencies and install dependencies through conda.
+The installer will install miniforge into `~/RNAival_Dependencies` and install dependencies through conda.
 The installer tries to create a desktop entry in usr/share/applications, which requires root-user priviliges, but is not critical for usage.
 On Windows/WSL, prefix the commands with "wsl" or switch to a WSL terminal beforehand.
 
