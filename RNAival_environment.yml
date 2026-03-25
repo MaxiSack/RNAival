@@ -1,0 +1,13 @@
+name: RNAival
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bowtie
+  - bowtie2
+  - cutadapt
+  - ngmerge
+  - pysam
+  - samtools
+  - xorg-libxft
+  - tk=*=xft_*
