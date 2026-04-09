@@ -7,7 +7,6 @@ from tkinter.ttk import Label as ThemedLabel
 
 import graphs.InteractiveGraph as ig
 import graphs.drawGraphics as graphLib
-from functions.baseFunctions import getLocalMaxima	#TODO cleanup !
 
 import gui.functions as fun
 
@@ -32,13 +31,12 @@ class Combograph:
 		#	only change parent
 		#	re-gens IGs + draws them
 		
-		#TODO who manages notebook tabs for combos right now?
-		
 		self.title = title
 		self.groupID = groupID	#key for main.outputGroups -> notebook
 		self.main = main
 		print("\n[Combo] Creating combograph "+str(self.title))
 		
+		self.pointRadius = 10	#TODO allow setting from GUI
 		
 		
 		self.xlab=xlab
@@ -46,9 +44,7 @@ class Combograph:
 		
 		self.xLabels=None
 		self.xLabelSpace=0
-		self.cutOuterXLabsBool=False
 		
-		#self.graphDataList = list()	#list of (graphName,graphData)
 		self.allGraphData = dict()		#dict of graphName -> graphData
 		#graphData can be:
 		# list of [x,y1,y2,y3,...]	-> (multi-)barplot	BAR
@@ -69,9 +65,6 @@ class Combograph:
 			self.positionalColouring = positionalColouring	# [0,1] * {xval:style}
 		self.setStyles(styles)
 		
-		self.stacked=False	#TODO
-		
-		self.peakGroups = dict()	#TODO remove this stuff...
 		self.globalYScale=False
 		self.ybins = -1
 		self.ystep = -1
@@ -94,13 +87,13 @@ class Combograph:
 		self.styles["default"]=(self.main.graphBarColour,self.main.graphLineColour,"1")
 		if not styles is None:
 			for key,value in styles.items():
-				self.styles[key]=(value[0],value[1],"1")
+				self.styles[key]=(value[0],value[1],value[2])
 	
 	def addPointDescriptor(self,descriptorFields,pointDescriptor):	#used for SCATTER ... #TODO could be used more
 		self.descriptorFields = descriptorFields
 		self.pointDescriptor = pointDescriptor
 	
-	def addData(self,data,globalYScale=False,colourscale=None,colouroverride=None,axislabels=None,peakGroups=None):
+	def addData(self,data,globalYScale=False,colourscale=None,colouroverride=None,axislabels=None):
 		#print("[Combo] Setting data for combograph "+str(self.title)+", "+str(len(data))+" sub-graphs")
 		self.globalYScale=globalYScale
 		self.colourscale_define=colourscale
@@ -111,10 +104,9 @@ class Combograph:
 			self.yvals=data[0][1][1]
 			ndatapoints = len(self.xvals)
 			self.ybins = len(self.yvals)
-			self.ystep = 1	#needs to be 1, for some reason...
-			#print("[Combo] HEAT: "+str(ndatapoints)+" x "+str(self.ybins))
-			
-			self.highlightpositions = set()	#TODO
+			self.ystep = 1	#needs to be 1, for some reason...	#TODO
+			#print("[Combo] HEAT: "+str(ndatapoints)+" x "+str(self.ybins)
+			self.highlightpositions = set()
 			
 		if not axislabels is None and len(axislabels)!=len(data):
 			print(f"\nERROR, length missmatch!: {axislabels}")
@@ -124,8 +116,7 @@ class Combograph:
 			self.addGraph(graphName,graphData,
 				colouroverride=None if colouroverride is None else colouroverride[i],
 				#axislabels is list of [(xlab,ylab) for each subgraph]	#(to allow for different types of scatter plots, e.g. volcano+positional)
-				axislabels=(self.xlab,self.ylab) if axislabels is None else axislabels[i],
-				peakGroups=None if peakGroups is None else peakGroups[i])
+				axislabels=(self.xlab,self.ylab) if axislabels is None else axislabels[i])
 			
 			if len(graphData) != ndatapoints and not self.graphType=="HEAT":
 				print("[Combo] ERROR! data are not the same length!:\n\t"+str(ndatapoints)+"\t"+str(len(graphData)))
@@ -133,7 +124,7 @@ class Combograph:
 		if self.graphType=="SCATTER":
 			return
 		
-		self.xbins,self.xstep = ig.getAxisScale(ndatapoints)	#TODO gets re-calculated when drawing anyway...
+		self.xbins,self.xstep = graphLib.getAxisScale(ndatapoints)	#TODO gets re-calculated when drawing anyway...
 		if self.xbins==-1 or self.xstep==-1:
 			self.error=True
 		#print("[Combo] Xaxis: "+str(self.xbins)+" "+str(self.xstep)+" "+str(ndatapoints))
@@ -151,71 +142,33 @@ class Combograph:
 						maxy2 = max(max([max([point[i] for i in range(2,len(point),2)]) for point in graphData]),maxy2)
 				
 				if len(graphData[0])>2:
-					self.ybins,self.ystep = ig.getAxisScale2(maxy1,maxy2)	#TODO currently overriden when drawing
+					self.ybins,self.ystep = graphLib.getAxisScale2(maxy1,maxy2)	#TODO currently overriden when drawing
 				else:
-					self.ybins,self.ystep = ig.getAxisScale(maxy1)
+					self.ybins,self.ystep = graphLib.getAxisScale(maxy1)
 				if self.ybins==-1 or self.ystep==-1:
 					self.error=True
 					#print(str(maxy1)+" "+str(maxy2))
-					print("[Combo] ERROR: No step size found for "+str(graphName)+": "+"\t".join([str(max([point[i] for point in graphData])) for i in range(1,len(graphData[0]))]))
+					print("[Combo] ERROR: No step size found for "+str(graphName)+": "+"\t".join(
+						[str(max([point[i] for point in graphData])) for i in range(1,len(graphData[0]))]))
 				print("[Combo] Global Y-Bins calculated: "+str(self.ybins))
-		#print("\n[DEBUG] graph Data bounds:")
-		#if len(graphData[0])<10:
-		#	print("[DEBUG] "+str(graphData[0])+" "+str(graphData[-1]))
-		#else:
-		#	print("[DEBUG] "+str(len(graphData[0]))+" x "+str(len(graphData[0][0])))
 	
-	def addGraph(self,graphName,graphData,colouroverride=None,axislabels=None,peakGroups=None):
+	def addGraph(self,graphName,graphData,colouroverride=None,axislabels=None):
 		self.allGraphData[graphName]=graphData
 		self.colouroverride[graphName]=colouroverride	#TODO instead store all this in one parameter dict to then pass onto the drawfunciton... ?
+								#curretnly unused; used for the coulourscale of points in a scatter graph
 		self.axislabels[graphName]=axislabels
-		if self.graphType=="BAR":
-			if peakGroups is None:
-				self.peakGroups[graphName] = getLocalMaxima(self.allGraphData[graphName])
-			else:
-				self.peakGroups[graphName] = peakGroups
-			pass
-		else:
-			self.peakGroups[graphName] = None
-	
-	def getPeakGroups(self,graphNames):
-		return [self.peakGroups[graphName] for graphName in graphNames]	
 	
 	def setXLabels(self,xLabels,xSpace):
 		self.xLabels=xLabels
 		self.xLabelSpace=xSpace
 	
-	#def setXYLab(self,xlab=None,ylab=None):	#not needed, labels are only set on graph creation/data load!	
-	#	if not xlab is None:self.xlab=xlab	#but maybe could be set later.... ! ......
-	#	if not ylab is None:self.ylab=ylab
-	
-	def cutOuterXLabs(self):
-		self.cutOuterXLabsBool=True
-	
-	#def genPeakGroups(self):
-	#	peakGroups=list()
-	#	for i,(graphName,graphData) in enumerate(self.allGraphData.items()):
-	#		peakGroups.append( esi.getLocalMaxima(self.graphData))	#TODO set from elsewhere
-	
-	
-	def generateIGs(self,main,resultsPath):	#TODO set aprent frame for combo and then gen IGs onto that... ~~ split generate from draw??
-		
-		
-		
-		
+	def generateIGs(self,main,resultsPath):	#TODO set parent frame for combo and then gen IGs onto that... ~~ split generate from draw??
 		#print("\n[Combo] Creating IGs for combograph "+str(self.title)+":")
 		
-		#self.graphCanvas = Canvas(basegui.outputGraphicsNotebook)#,bg=self.backgroundColour,highlightthickness=0)
-		#basegui.outputGraphicsScrollCanvasList.append(self.graphCanvas)
-		#basegui.outputGraphicsNotebook.add(self.graphCanvas,text=self.title)
-		#self.graphCanvas["yscrollcommand"] = basegui.outputGraphicsScrollbar.set
-		#self.graphCanvas.pack(side="left",fill="y")
-		#self.graphFrame = ThemedFrame(self.graphCanvas)
-		#self.graphCanvas.create_window((0,0),window=self.graphFrame,anchor="nw")
-		#self.graphFrame.bind_all("<Button-4>",self.mouseWheelScroll)
-		#self.graphFrame.bind_all("<Button-5>",self.mouseWheelScroll)	#TODO extra function for graph scroll
+		#self.graphFrame.bind_all("<Button-4>",self.mouseWheelScroll)	#TODO reimplement scrol with mouse in graph area
+		#self.graphFrame.bind_all("<Button-5>",self.mouseWheelScroll)
 		
-		if self.graphFrame is None:	#TODO also add extra label with (full) title !!
+		if self.graphFrame is None:
 			notebook,scrollbar,scrollList = fun.addOutputGraphicsGroup(main,self.groupID)
 			self.graphFrame = ThemedFrame(notebook,style="TEST.TFrame")
 			notebook.add(self.graphFrame,text=self.title)
@@ -229,29 +182,25 @@ class Combograph:
 			
 			ThemedLabel(self.graphFrame2,text=self.title,style="Medium.TLabel").pack(fill="x",anchor="nw",expand=True)
 			
-			#fitCanvasWidthGraph(self,canvas)
-			main.mainWindow.after(1000,lambda canvas=self.graphCanvas: main.fitCanvasWidthGraph(canvas))	#TODO ??? even neccessary? ~~yeah...
-		#else:
-		#	for child in graphFrame2.winfo_children():child.destroy()
-			#TODO make it so that IG just re-draws itself insted of requiring reletiong of the objects !
+			#main.mainWindow.after(1000,lambda canvas=self.graphCanvas: main.fitCanvasWidthGraph(canvas))	#TODO requried for the scrollbar?, test later !
 		
-		#self.IGdict = dict()	#TODO dont delete IGs, just re-draw them ! (in a different function)
+		#self.IGdict = dict()	#TODO dont delete Combos and IGs, just re-draw them ! (in a different function)
 		#genIGs should only be called once ! or again if we pop-out the window!
 		if len(self.IGdict)>0:return
 		
 		#graphWidth = basegui.mainNotebook.winfo_width()
-		graphWidth = main.mainNotebook.winfo_width()-30	#TODO refer to combo parentframe ! #TODO re-calc when displaying...?
+		graphWidth = main.mainNotebook.winfo_width()-30	#TODO refer to combo parentframe !
 		#graphHeight = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
-		graphHeight = main.mainNotebook.winfo_height()*0.4
+		graphHeight = main.mainNotebook.winfo_height()*0.38
 		#if graphHeightlen(self.allGraphData.keys())==1: = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
 		if len(self.allGraphData.keys())==1:graphHeight = main.mainNotebook.winfo_height()*0.80
 		for (graphName,graphData) in self.allGraphData.items():
 			xlab,ylab = self.axislabels[graphName]
 			#print("\nLABELS: "+str(self.axislabels[graphName]))
+			#resultsPath is only used for the inate eps export of tkinter canvas
 			newGraph = ig.InteractiveGraph(main,self.graphFrame2,graphWidth,graphHeight,graphName,resultsPath,styles=self.styles,
-				positionalColouring=self.positionalColouring,peakGroups=self.peakGroups[graphName],graphType = self.graphType,parentCombo=self,
-				xlab=xlab,ylab=ylab,lineColours=self.lineColours
-				)#,colouring=self.colouring)#TODO resultsfolder, do properly!
+				positionalColouring=self.positionalColouring,graphType = self.graphType,parentCombo=self,
+				xlab=xlab,ylab=ylab,lineColours=self.lineColours)
 			self.IGdict[graphName]=newGraph
 			#print("[Combo] Y-bins for IG: "+str(self.ybins))
 			newGraph.setXLabels(self.xLabels)
@@ -259,13 +208,12 @@ class Combograph:
 			if graphName in self.colouroverride:
 				newGraph.overrideColours(self.colouroverride[graphName])
 	
-	def drawOntoGui(self,fontmultiplier=1.0):
+	def drawOntoGui(self,fontMultiplier=1.0):
 		print("\n[Combo] Drawing IGs of combograph "+str(self.title)+" onto GUI")
 		for graphName,newGraph in self.IGdict.items():
-			newGraph.drawGraph(fontmultiplier=fontmultiplier)
+			newGraph.drawGraph(fontMultiplier=fontMultiplier)
 	
-	def addConnectedGraph(self,comboGraph):
-		#TODO can send signals to another
+	def addConnectedGraph(self,comboGraph):#can send signals to another
 		self.connectedGraphs.append(comboGraph)
 	
 	def selectPoint(self, pos):
@@ -290,144 +238,55 @@ class Combograph:
 		print("[Combo] Clearing selected points:\n"+str(self.selectedPoints))
 		for pos in list(self.selectedPoints):
 			self.clearPoint(pos)
-			#for igraph in self.IGdict.values():
-			#	igraph.clearPoint(pos)
-		#self.selectedPoints = set()
 	
-	def clearConnected(self):	#TODO !
+	def clearConnected(self):
 		print("[Combo] Clearing all connected Graphs")
-		if combo in self.selectedPoints:	#TODO shold be: for combo in self.connectedgraphs
-			combo.clearSelection()
+		#self.clearSelection()	#self is in connectedGraphs
+		for comboGraph in self.connectedGraphs:
+			comboGraph.clearSelection()
 	
-#	def highlight(self,pattern=None):
-#		print("\n[Combo] Highlighting IGs for combograph "+str(self.title)+":")
-#		#if not pattern is None:
-#		#	for graphName,newGraph in self.IGdict.items():
-#		#		newGraph.highlightBars(pattern=pattern)
-#		if not self.highlights is None:
-#			for graphName,newGraph in self.IGdict.items():
-#				#print("Highlighting! "+str(self.highlights))
-#				#newGraph.highlightBars(highlights=self.highlights)
-#				#TODO
-#				print("[IG] HIGHLIGHTING EXTRA NOT CURRENTLY SUPPORTED!")
-	
-	def exportAsSVG(self,resultsPath,exportW,exportH,exportFontsize):	#TODO specify libraries and make this the function from the IG for self-export (with libID in the defaultname)
-		if self.graphType=="SCATTER":return	#TODO implement this
-		titleOffset = int(exportFontsize)*2
-		print("\n[Combo] Exporting combograph "+str(self.title))
-		#print("[Combo] Legend: "+str(self.legend))
+	def exportAsSVG(self,resultsPath,exportW,exportH,fontMultiplier):
+		#TODO specify libraries and make this the function from the IG for self-export (with libID in the defaultname)
+		titleFontsize = int(26*fontMultiplier)
+		#fonts in SVG are only halve as big. #this affects the spacing given to text !
+		#fixed in SVG_canvas class. #TODO Still need to address other spacing issues and the size of points in scatter plot!
 		mySVG = list()
 		mySVG.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>")
 		mySVG.append("<!-- Created by RNAival, from the project DigitalPROTECT, University of Halle -->")
+		titleOffset = int(titleFontsize)*2
 		tw=int(graphWidth) if exportW is None else int(exportW)
-		if not self.legend is None: tw+=int(exportFontsize)*13
-		th=(int(graphHeight) if exportH is None else int(exportH)+10)+self.xLabelSpace
-		mySVG.append("<svg x=\""+str(0)+"\" y=\""+str(0)+"\" width=\""+str(tw)+"\" height=\""
-			+str(th*len(self.allGraphData.keys())+titleOffset)+"\" viewbox=\"0 0 "+str(tw)
-			+" "+str(th*len(self.allGraphData.keys())+titleOffset)+"\" xmlns=\"http://www.w3.org/2000/svg\">")
+		libNameSpace = int(40*fontMultiplier)
+		th=(int(graphHeight) if exportH is None else int(exportH))
+		mySVG.append("<svg x=\""+str(0)+"\" y=\""+str(0)+"\" width=\""+str(tw+libNameSpace)+"\" height=\""
+			+str((th+10)*len(self.allGraphData.keys())+titleOffset-10)+"\" viewbox=\"0 0 "+str(tw)
+			+" "+str((th+10)*len(self.allGraphData.keys())+titleOffset-10)+"\" xmlns=\"http://www.w3.org/2000/svg\">")
+		graphLib.svg_drawRect(mySVG,0,0,tw+libNameSpace,(th+10)*len(self.allGraphData.keys())+titleOffset-10,sw=2,stroke="#000000",fill="#ffffff")
+		graphLib.svg_drawText(mySVG,tw/2,titleFontsize,self.title,fontsize=int(titleFontsize),xanchor="middle",yanchor="middle")
 		
-		
-		for key,style in self.styles.items():graphLib.svg_writeStyle(mySVG,key,style[0],style[1],sw=1)
-		
-		self.exportFontsize = exportFontsize
-		#TODO combograph title!!
-		graphLib.svg_drawText(mySVG,tw/2,exportFontsize,self.title,fontsize=int(exportFontsize*1.3),xanchor="middle",yanchor="middle")
-		
+		#TODO Styles for svg	#address this from the graph creation side first
+		#TODO globalYScale
 		for i,(graphName,graphData) in enumerate(self.allGraphData.items()):
-			graph_yoffset=th*i + titleOffset
-			graph_xoffset=0
-			
-			
-			self.width = exportW
-			self.height = th	#exportH
-			self.xbase=exportFontsize*4 if self.ylab is None else exportFontsize*6		#TODO scalefactor!
-			self.axisbuffer = 5
-			self.markerLength = 10
-			self.ybuffer = exportFontsize*1.5 if self.xlab is None else exportFontsize*3.5
-			self.ybuffer += self.xLabelSpace
-			self.ybase=self.height-self.ybuffer
-			self.plotwidth = self.width-self.xbase
-			self.plotheight = self.height-self.ybuffer
-			
-			self.graphData = graphData
-			
-			
-			
-			#maxy1 = max([point[-2] for point in graphData])
-			#maxy2 = max([point[-1] for point in graphData])
-			if self.globalYScale:
-				#print("[Combo] Using global Yscale: "+str(self.ybins)+"x"+str(self.ystep)+"p")
-				pass
+			graphLib.svg_drawText(mySVG,tw+int(7*fontMultiplier),(th+10)*i + titleOffset+th/2,str(graphName),
+				xanchor="middle",yanchor="bottom",rotation=90,fontsize=int(22*fontMultiplier))
+			canvas = graphLib.SVG_Canvas(mySVG,startx=0,starty=(th+10)*i + titleOffset,width=500,height=500)
+			if self.graphType == "HEAT":
+				graphData=graphData[0]
+				colourscale,legend = getColourScale(graphData,self.colourscale_define)
 			else:
-				maxy1 = max([max([point[i] for i in range(1,len(point),2)]) for point in graphData])
-				if len(graphData[0])>2:
-					maxy2 = max([max([point[i] for i in range(2,len(point),2)]) for point in graphData])
-					self.ybins,self.ystep = ig.getAxisScale2(maxy1,maxy2)
-				else:
-					self.ybins,self.ystep = ig.getAxisScale(maxy1)
-				if self.ybins==-1 or self.ystep==-1:
-					self.error=True
-					#print(str(maxy1)+" "+str(maxy2))
-					print("[Combo] ERROR: No step size found for "+str(graphName)+": "+"\t".join([str(max([point[i] for point in graphData])) for i in range(1,len(graphData[0]))]))
-				print("[Combo] Y-Bins: "+str(self.ybins))
-			self.xdataToPix = self.plotwidth / (self.xstep*(self.xbins+1))
-			
-			self.graphName = graphName
-			self.width = tw	#TODO!
-			
-			if self.graphType == "BAR" or self.graphType == "BAR2":
-			
-				barwidth = self.xdataToPix
-				self.barRadius = max(0.001,(barwidth)/2.0)
-				sw=1
-				if self.barRadius <1: sw=max(0.1,self.barRadius/2)
-				self.styles["defBar"]=(self.main.graphBarColour,self.main.graphLineColour,str(sw))
-				#self.styles["defBar"]=(self.main.graphBarColour,self.main.graphLineColour,str(sw))	#TODO ????
-				graphLib.svg_writeStyle(mySVG,"defBar",self.styles["defBar"][0],self.styles["defBar"][1],sw=self.styles["defBar"][2])	#TODO define earlier ~ all graphs have same x!!!
-				
-				if len(graphData[0])>2:	#TODO unify in the function!
-					self.ydataToPix = self.plotheight / (self.ystep*(sum(self.ybins)+1))
-					self.yzero = self.ybase - self.ybins[1]*self.ystep*self.ydataToPix
-					graphLib.svg_drawBar2plot(mySVG,self,self.allGraphData[graphName],
-						lineColour=self.main.graphLineColour,barColour=self.main.graphLineColour,barFillColour=self.main.graphBarColour,
-						width=tw,height=exportH+self.xLabelSpace,scaleFactor=self.main.osScaleFactor,graph_yoffset=graph_yoffset,graph_xoffset=graph_xoffset)
-				else:
-					self.ydataToPix = self.plotheight / (self.ystep*(self.ybins))
-					self.yzero = self.ybase# - self.ybins*self.ystep*self.ydataToPix
-					#print("yzeroCalc")
-					#print(self.ybase)
-					#print(self.ybins)
-					#print(self.ybins*self.ystep*self.ydataToPix)
-					#print(self.graphName)
-					#print(self.colouroverride.keys())
-					#print(self.colouroverride[graphName][:10])
-					graphLib.svg_drawBarplot(mySVG,self,self.allGraphData[graphName],
-						lineColour=self.main.graphLineColour,barColour=self.main.graphLineColour,barFillColour=self.main.graphBarColour,
-						width=tw,height=exportH+self.xLabelSpace,scaleFactor=self.main.osScaleFactor,graph_yoffset=graph_yoffset,graph_xoffset=graph_xoffset,peakGroups=self.peakGroups[graphName])
-			
-			elif self.graphType == "HEAT":
-				self.ydataToPix = self.plotheight / (len(self.yvals)+1)
-				self.yzero = self.ybase
-				
-				#print("\t[COMBO] HEAT export")
-				#print(str(len(self.allGraphData[graphName][0]))+" "+str(len(self.allGraphData[graphName][0][0])))
-				colourscale,legend = getColourScale(self.allGraphData[graphName][0],self.colourscale_define)
-				#print(colourscale)
-				#print(legend)
-				graphLib.svg_drawHeatmap(mySVG,self,self.allGraphData[graphName][0],
-					lineColour=self.main.graphLineColour,colourscale=colourscale,
-					width=exportW,height=exportH,scaleFactor=self.main.osScaleFactor,
-					graph_yoffset=graph_yoffset,graph_xoffset=graph_xoffset,legend=legend)
-				pass
-			
+				colourscale=None
+				legend=self.legend
+			canvas.set_styles(self.styles)
+			xlab,ylab = self.axislabels[graphName]
+			graphLib.canvas_createPlot(self,canvas,graphData,lineColour=self.main.graphLineColour,graphType=self.graphType,colourscale=colourscale,
+				width=tw,height=th,fontMultiplier=fontMultiplier,
+				xlabel=xlab,ylabel=ylab,legend=legend,x_canvasOffset=0,y_canvasOffset=(th+10)*i + titleOffset,drawBorder=True)
+		
 		mySVG.append("</svg>")
 		
-		with open(os.path.join(resultsPath,self.title+".svg"),"w") as svgw:
+		with open(os.path.join(resultsPath,f"{self.groupID}_{self.title}.svg"),"w") as svgw:
 			svgw.write("\n".join(mySVG))
 	
-	
-	
-	def calcGraphBounds(self,graphType=None):
+	def calcGraphBounds(self,graphType=None):	#TODO unused and outdated; could be used for synchronised y-scale
 		if not graphType is None: self.graphType=graphType
 		if self.graphType is None:
 			print("ERROR: graphtype not set!")
@@ -465,10 +324,8 @@ class Combograph:
 					self.combo_y_max=max(self.combo_y_max,maxy)
 					
 		if self.graphType=="Map":
-			#for graphData in self.graphDataList:
-				#TODO chck that dimensions match
-			pass	#axis labels need to be set differently or special map... map is x*[y*[z]]
-				#need extra lists for xpos and xpos, then calc "bounds" (axis labels) from those
+			#TODO check that dimensions match
+			pass
 		
 		print("[Combo] "+self.title+"-Bounds: "+str(self.combo_x_min)+"-"+str(self.combo_x_max)+"x"+str(self.combo_y_min)+"-"+str(self.combo_y_max))
 	
@@ -515,11 +372,10 @@ def getColourScale(graphData,colourscale_define):
 				val=sortedValues[int(len(sortedValues)/100*point[2])]
 				legendDesc.append((graphLib.getHexColourTuple(colour),str(val)+" (p"+str(round(point[2],0))+")"))
 			else:
-				print("ERROR: could not find relative definition in colouscale point: "+str(point))
+				print("ERROR: could not find relative definition in colourscale point: "+str(point))
 		else:
 			print("ERROR: could not find colourscale point type: "+str(point))
 		colourscale.append((val,colour))
 	#print(colourscale)
 	legend=("Count:",legendDesc)
-	#if -1 in self.yvals:self.legend[1].append(("#ff00ff","esiRNAs"))	#TODO legend addition for marled cells! (also mark cells)
 	return colourscale,legend

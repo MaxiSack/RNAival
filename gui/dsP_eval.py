@@ -31,10 +31,10 @@ def getColours(main):	# ------------------ colours ------------------------
 		return False
 	
 	highlightStyles = dict()
-	highlightStyles["esiGS"]=(esiGSC,multiplyColour(0.7,esiGSC))
-	highlightStyles["esiPS"]=(esiPSC,multiplyColour(0.7,esiPSC))
-	highlightStyles["pseudoGS"]=(pseudoGSC,multiplyColour(0.7,pseudoGSC))
-	highlightStyles["pseudoPS"]=(pseudoPSC,multiplyColour(0.7,pseudoPSC))
+	highlightStyles["esiGS"]=(esiGSC,multiplyColour(0.7,esiGSC),1)
+	highlightStyles["esiPS"]=(esiPSC,multiplyColour(0.7,esiPSC),1)
+	highlightStyles["pseudoGS"]=(pseudoGSC,multiplyColour(0.7,pseudoGSC),1)
+	highlightStyles["pseudoPS"]=(pseudoPSC,multiplyColour(0.7,pseudoPSC),1)
 	return highlightStyles
 
 def getWantedgraphs(main):
@@ -51,14 +51,6 @@ def getWantedgraphs(main):
 	hideLL = main.PM.get("hideLabelsLegends")
 	
 	#TODO dont need foldouts anymore !
-	# ------------------ Export overrides ------------------------
-	exportW=None
-	exportH=None
-	exportFontsize=22#int(round(12*main.osScaleFactor,0))
-	if main.foldoutStates[main.graphicStateIDs["exportOverrideID"]]:
-		exportW = main.PM.get("exportOverrideWidth")
-		exportH = main.PM.get("exportOverrideHeight")
-		exportFontsize = main.PM.get("exportFontsizeVar")
 	
 	# ------------------- length distribution -------------------
 	if main.foldoutStates[main.graphicStateIDs["graphLenDistID"]]:
@@ -490,12 +482,15 @@ def add_dsP_eval_GUI(main):
 	ThemedLabel(exportOverrideFrame,text="Heigth",anchor="w").grid(column=2,row=1,sticky="w")
 	ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"exportOverrideHeight",IntVar(),"int",500,
 		"","")).grid(column=3,row=1,sticky="e",padx=main.frameBorderSize)
-	ThemedLabel(exportOverrideFrame,text="Font size",anchor="w").grid(column=0,row=2,sticky="w")
-	ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"exportFontsizeVar",IntVar(),"int",22,
+	#ThemedLabel(exportOverrideFrame,text="Font size [SVG]",anchor="w").grid(column=0,row=2,sticky="w")
+	#ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"exportFontsizeVar",IntVar(),"int",22,
+	#	"","")).grid(column=1,row=2,sticky="e",padx=main.frameBorderSize)
+	ThemedLabel(exportOverrideFrame,text="Font multiplier [GUI]",anchor="w").grid(column=0,row=2,sticky="w")
+	ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"fontMultiplierGUI",StringVar(),"float",1.0,
 		"","")).grid(column=1,row=2,sticky="e",padx=main.frameBorderSize)
-	ThemedLabel(exportOverrideFrame,text="Font multiplier",anchor="w").grid(column=0,row=2,sticky="w")
-	ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"fontMultiplier",StringVar(),"float",1.0,
-		"","")).grid(column=1,row=2,sticky="e",padx=main.frameBorderSize)
+	ThemedLabel(exportOverrideFrame,text="Font multiplier [SVG]",anchor="w").grid(column=0,row=3,sticky="w")
+	ThemedEntry(exportOverrideFrame,textvariable=addGraphicVar(main,"fontMultiplierSVG",StringVar(),"float",1.0,
+		"","")).grid(column=1,row=3,sticky="e",padx=main.frameBorderSize)
 	
 	exportOverrideFrame.columnconfigure(0,weight=1,uniform="fred")
 	exportOverrideFrame.columnconfigure(1,weight=1,uniform="fred")

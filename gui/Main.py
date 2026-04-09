@@ -63,8 +63,7 @@ class Main():
 		if not projectPath is None:
 			self.PM.set("projectPath",projectPath)
 			functions.saveSettings(self)
-		
-		#self.loadDataIntoGUI()
+		self.loadDataIntoGUI()
 	
 	def reset(self):
 		print("\n[Main] resetting everything")
@@ -129,6 +128,8 @@ class Main():
 		#or check them?
 		#or just delete them and make an extra button for displayupdates, but pipe always creates new ones?
 		return functions.loadDataIntoGUI(self)
+	def exportGraphs(self):
+		return functions.exportGraphs(self)
 	def terminateThreads(self):
 		self.killSignal[0] = True
 		print("Killing all running threads: "+str(self.killSignal[0]))

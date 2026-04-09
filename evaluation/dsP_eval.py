@@ -16,7 +16,7 @@ def exportGraphs(main):
 	if not main.checkInputParams():return False
 	#lg.setStyles(main,getColours(main))
 	lg.exportGraphs(main,resultDir,main.PM.get("exportOverrideWidth"),main.PM.get("exportOverrideHeight"),
-		main.PM.get("exportFontsizeVar"))
+		fontMultiplier=main.PM.get("fontMultiplierSVG"))
 	print("\n[siGUI] ...done.")
 	
 def displayGraphs(main):
@@ -27,7 +27,7 @@ def displayGraphs(main):
 	if not main.checkInputParams():return False
 	#main.resetGraphicsOutput()	#TODO keep track of generated graphics and reset only the ones that are re-generated..
 	#lg.setStyles(main,getColours(main))	#TODO is for update...
-	if lg.showGraphs(main,resultDir,main.PM.get("fontMultiplier")):
+	if lg.showGraphs(main,resultDir,main.PM.get("fontMultiplierGUI")):
 		main.mainNotebook.select(main.graphicsTabIndex)
 	print("\n[siGUI] ...done.")
 

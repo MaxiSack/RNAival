@@ -90,11 +90,12 @@ def loadDataIntoGUI(main,libPairs,gui=True,export=True):
 				 for i in range(len(graphList[0][1]))]
 			logPoolCounts = [(graphList[0][1][i][0],graphList[0][1][i][0],log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1)) for i in range(len(graphList[0][1]))]
 			logPoolGraph = (graphList[0][0]+"_log",logPoolCounts)
-			#graph.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],colouroverride=[None,pointColours],
-			#	axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
 			
-			graph.addData([(graphList[0][0]+"_Volcano",points)],	#Only show volcano
-				axislabels=[("Log2 Foldchange","Log2 Difference")])
+			graph.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],colouroverride=[None,pointColours],
+				axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
+			#graph.addData([(graphList[0][0]+"_Volcano",points)],	#Only show volcano
+			#	axislabels=[("Log2 Foldchange","Log2 Difference")])
+			
 			main.comboGraphs[graphNameV] = graph
 			
 			graph.addConnectedGraph(main.comboGraphs[graphNameA])

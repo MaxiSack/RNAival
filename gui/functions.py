@@ -171,6 +171,10 @@ def loadDataIntoGUI(main):
 	print(f"[main func] {b1} {b2}")
 	return b1 and b2
 
+def exportGraphs(main):
+	import evaluation.dsP_eval as dspe
+	dspe.exportGraphs(main)
+
 def writeLog(main,text,error=False,warn=False):
 	main.outputTextLog["state"]="normal"
 	main.outputTextLog.insert("end","\n"+str(text))
@@ -366,15 +370,15 @@ def addLibIDSelectionMenu(main,parentFrame,ppt=None,evalType=None):
 def addOutputGraphicsGroup(main,key):	#add new notebook for graphs with the same target/key to the graphicla output
 	if not key in main.outputGroups:	#but dont overwrite existing; just add graphs to the notebook (that was created by another function)
 		
-		keyBaseFrame = ThemedFrame(main.outputGraphicsNotebook)
-		main.outputGraphicsNotebook.add(keyBaseFrame,text=str(key))
+		keyBaseFrame = ThemedFrame(main.outputGraphicsNotebook,style="TEST.TFrame")
+		main.outputGraphicsNotebook.add(keyBaseFrame,text=str(key),sticky="news")
 		#keyNotebook = Notebook(main.outputGraphicsNotebook)
 		#main.outputGraphicsNotebook.add(keyNotebook,text=str(key))
 		keyScrollbar = ThemedScrollbar(keyBaseFrame,orient="vertical",command=lambda *args, main=main,key=key:scrollGraphicsOutput(main,key,*args))
 		keyScrollbarCanvasList = list()	#TODO also add mouse wheel scrolling...	~figure out how that works with multiple windows....
 		keyScrollbar.pack(side="left",fill="y")
 		keyNotebook = Notebook(keyBaseFrame)
-		keyNotebook.pack(side="left",fill="both")
+		keyNotebook.pack(side="left",fill="both",expand=True)
 		#new graphs added to [0], canvas for scrolling in those tabs listen to [1] and updated with [2]	#TODO there are some sync issues with unselected tabs....or not?
 		main.outputGroups[key] = [keyNotebook, keyScrollbar, keyScrollbarCanvasList]
 	return main.outputGroups[key]

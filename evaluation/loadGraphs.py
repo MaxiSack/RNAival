@@ -4,7 +4,7 @@ import os.path
 from graphs.Combograph import Combograph
 from iostuff.readCountDB import ReadCountsDatabase
 
-def showGraphs(basegui,resultDir,fontmultiplier=1.0):
+def showGraphs(basegui,resultDir,fontMultiplier=1.0):
 	if basegui.comboGraphs is None:
 		basegui.writeError("\tERROR Data not loaded!")
 		print("[LoadGraphs] ERROR Data not loaded!")
@@ -13,16 +13,16 @@ def showGraphs(basegui,resultDir,fontmultiplier=1.0):
 	for graph in basegui.comboGraphs.values():
 		#print("[Debug] displaying "+str(graph.title))
 		graph.generateIGs(basegui,resultDir)
-		graph.drawOntoGui(fontmultiplier=fontmultiplier)
+		graph.drawOntoGui(fontMultiplier=fontMultiplier)
 	return True
 
-def exportGraphs(basegui,resultsPath,exportW,exportH,exportFontsize):
+def exportGraphs(basegui,resultsPath,exportW,exportH,fontMultiplier=1.0):
 	if basegui.comboGraphs is None:
 		basegui.writeError("\tERROR Data not loaded!")
 		print("[LoadGraphs] ERROR Data not loaded!")
 		return False
 	for graph in basegui.comboGraphs.values():
-		graph.exportAsSVG(resultsPath,exportW,exportH,exportFontsize)
+		graph.exportAsSVG(resultsPath,exportW,exportH,fontMultiplier)
 	return True
 
 def setStyles(basegui,highlightStyles):
@@ -71,7 +71,6 @@ def addGraph_LenDist(basegui,graphDef,libIDs,db,highlightStyles=None):
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.addData(graphList)
-	#graph.cutOuterXLabs()
 	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
 
 def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even?

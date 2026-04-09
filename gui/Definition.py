@@ -93,7 +93,8 @@ def defineGUI(main):
 	ThemedButton(main.inputFrame,text="Check input [tmp]",command=lambda main=main:checkInputParams(main)).pack(fill="x",anchor="nw")
 	ThemedButton(main.inputFrame,text="Save settings [tmp]",command=lambda main=main:saveSettings(main)).pack(fill="x",anchor="nw")
 	ThemedButton(main.inputFrame,text="Load graphics [tmp]",command=main.loadDataIntoGUI).pack(fill="x",anchor="nw")
-	
+	#TODO export
+	ThemedButton(main.inputFrame,text="Export [tmp]",command=main.exportGraphs).pack(fill="x",anchor="nw")
 	
 	
 	#TODO make nicer! general parameters; sould be part of programsettings and/or projectsettings ~
