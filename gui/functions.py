@@ -3,6 +3,7 @@ import json
 import os.path
 from datetime import datetime
 from pathlib import Path
+from importlib import import_module
 
 from tkinter import BooleanVar
 from tkinter import StringVar
@@ -17,7 +18,7 @@ from tkinter import Toplevel
 from tkinter.filedialog import askdirectory
 
 import iostuff.seqFiles as seqIO
-from gui.inputSelection import updateSeqFiles,updateTargetListFrame
+from gui.inputSelection import updateSeqFiles,updateTargetListFrame,saveSeqFiles
 import gui.siI_eval as sig
 
 nucset={"A","C","G","T","U","N"}
@@ -85,9 +86,20 @@ def createNewProject(main,projectParentPath,newWindow):
 	main.reset()
 	showAllTabs(main)
 	main.mainNotebook.select(0)
-	main.PM.set("projectPath",pp)
-	main.mainWindow.title(f"RNAival - {os.path.basename(pp)}")
+	initProject(main,pp)
 	saveSettings(main)
+
+def initProject(main,pp):
+	initText = f"Initialising project {pp}"
+	bufferSize = max(1,(100-len(initText)))
+	print(f"\n{'#'*103}\n#{' '*101}#\n# {initText}{' '*bufferSize}#\n#{' '*101}#\n{'#'*103}\n")
+	main.PM.set("projectPath",pp)
+	logDir = os.path.join(pp,"Logs")
+	Path(logDir).mkdir(parents=True, exist_ok=True)
+	main.logFile = os.path.join(logDir,"log_"+str(datetime.now()).replace(" ","_")+".txt")
+	main.mainWindow.title(f"RNAival - {os.path.basename(pp)}")
+	for module in main.moduleDict.values():
+		module.init_project(main)
 
 def loadProject(main,pp):
 	settingsFile = os.path.join(pp,"ProjectSettings.json")
@@ -96,9 +108,8 @@ def loadProject(main,pp):
 		main.reset()
 		
 		print("[main func] loading project "+pp)
-		main.PM.set("projectPath",pp)
-		main.logFile = os.path.join(pp,"log_"+str(datetime.now()).replace(" ","_")+".txt")
-		main.mainWindow.title(f"RNAival - {os.path.basename(pp)}")
+		initProject(main,pp)
+		
 		parameterDict = dict()
 		inputDict = dict()
 		print(f"[main func] Loading settings from {settingsFile}")
@@ -107,17 +118,20 @@ def loadProject(main,pp):
 			jsonstr = jr.read()
 			#["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
 			_,parameterDict,_,inputDict = json.loads(jsonstr)
-		main.toggleButtonReferenceDict = dict()	#TODO re-init tmp values from main !!!
 		main.PM.setAll(parameterDict)
+		main.PM.loadParameterSets()
 		main.IM.setAll(inputDict,main=main)
 		updateTargetListFrame(main)
 		
 		for child in main.pairListFrame.pairChildren:child.destroy()
 		main.pairList = list()
 		libPairs = main.IM.getSIIPairs()
-		print(f"[main func] LibPairs: {libPairs}")
+		#print(f"[main func] LibPairs: {libPairs}")
 		for pair in libPairs:
 			sig.addPair(main,pairLoad=pair)
+		
+		for module in main.moduleDict.values():
+			module.after_project_load(main)
 		
 		main.mainNotebook.select(0)
 	else:
@@ -138,7 +152,8 @@ def saveSettings(main):
 		pass
 	with open(lppath,"w") as lpw: lpw.write("\n".join(lastProjects[:10]))
 	
-	updateSeqFiles(main)
+	#updateSeqFiles(main)
+	saveSeqFiles(main)
 	#print(main.PM.toString())
 	#print(main.IM.toString())
 	saveConstruct = ["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
@@ -146,29 +161,32 @@ def saveSettings(main):
 		json.dump(saveConstruct,jw,indent="\t",sort_keys=True)
 
 def openProjectList():
-	print("[main func] Showing project list")
+	print("[main func] [WIP] Showing project list")
 def openSettingsMenu():
-	print("[main func] Showing settings")
+	print("[main func] [WIP] Showing settings")
 def openAboutMenu():
-	print("[main func] Showing About")
+	print("[main func] [WIP] Showing About")
 
 def loadDataIntoGUI(main):
+	if not main.PM.validateTags(["graphics"]):
+		main.writeWarning("Error validating graphic parameters.")
+		return False
+	
 	#delete existing graphs (composition may have changed)
-	#for key,(keyNotebook, keyScrollbar, keyScrollbarCanvasList) in main.outputGroups.items():
-	#	for child in keyNotebook.winfo_children():child.destroy()
-	#	keyScrollbarCanvasList = list()	#scrollbat.set (probably) creates problems when deleting the canvases
 	main.comboGraphs = dict()
 	main.outputGroups = dict()	#just delete everything
 	for child in main.outputGraphicsNotebook.winfo_children():child.destroy()
 	
 	b1=sig.loadData(main,export=False,gui=False)
-	print(main.comboGraphs)
+	main.showTextOutputTab()
+	main.resetTextOutput()
+	
 	import gui.dsP_eval as dspg
 	b2=dspg.loadData(main,export=False,gui=False)
-	print(main.comboGraphs)
 	import evaluation.dsP_eval as dspe
 	main.mainWindow.after(1000,lambda main=main: dspe.displayGraphs(main))
-	print(f"[main func] {b1} {b2}")
+	
+	#print(f"[main func] {b1} {b2}")
 	return b1 and b2
 
 def exportGraphs(main):
@@ -218,11 +236,6 @@ def addInputVar(main,name,var,vartype,default,errormessage,desc,tag=None):
 	return main.PM.add(name,vartype,default,errormessage,desc,tags=None,tag=tag)
 def addGraphicVar(main,name,var,vartype,default,errormessage,desc):
 	return main.PM.add(name,vartype,default,errormessage,desc,tags=None,tag="graphics")
-def validateInputVar(main,key,vardesc):
-	return main.PM.validateParameter(key)
-def checkInputParams(main, inputDict=None):
-	return main.PM.checkInputParams(inputDict=inputDict)
-	
 	
 def toggleBoolButton(main,ID):
 	#print(f"[main func] Set: {ID} {main.toggleButtonReferenceDict[ID][1]}")
@@ -241,17 +254,19 @@ def createTogglebutton(main,parent,boolVar,syncKey=None):
 	#boolVar.get()
 	ID = len(main.toggleButtonReferenceDict.keys()) if syncKey is None else syncKey
 	tb = ThemedButton(parent,command=lambda main=main,i=ID: toggleBoolButton(main,i),style="internalDropClosed.TButton",image=main.boxImage)
-	if not ID in main.toggleButtonReferenceDict:main.toggleButtonReferenceDict[ID] = [[tb],boolVar]
+	if not ID in main.toggleButtonReferenceDict:main.toggleButtonReferenceDict[ID] = [list(),boolVar]
 	main.toggleButtonReferenceDict[ID][0].append(tb)
 	if boolVar.get():
 		tb["image"]=main.xBoxImage
-	#print(f"[main func] TB:  {ID} {boolVar}")
+	print(f"[main func] TB:  {ID} {boolVar.get()}")
 	#print(f"[main func] Set: {ID} {main.toggleButtonReferenceDict[ID][1]}")
 	return tb
 
 	
 def openInternalFoldout(main,foldoutID):	#call to toggle thefoldout buttons with ID
 	fouldoutFrameTuple = main.foldoutFrameReferenceList[foldoutID]
+	#print(f"\nFoldout: {fouldoutFrameTuple}")
+	print(f"[func] opening fouldout with ID {foldoutID} and open-state {main.foldoutStates[foldoutID]}")
 	
 	if main.foldoutStates[foldoutID]:
 		main.foldoutStates[foldoutID]=False
@@ -268,17 +283,16 @@ def openInternalFoldout(main,foldoutID):	#call to toggle thefoldout buttons with
 		fouldoutFrameTuple[2].configure(style="internalDropOpen.TButton")
 		fouldoutFrameTuple[2]["image"]=main.triUp
 		fouldoutFrameTuple[3].pack(anchor="n",expand=True,fill="x",side="top",padx=main.frameBorderSize,pady=main.frameBorderSize)
-		#fouldoutFrameTuple[4].configure(style="Raised.TFrame")	# TODO also sink ButtonFrame?
+		#fouldoutFrameTuple[4].configure(style="Raised.TFrame")
 	
 	#main.mainWindow.after(10,self.updateParamScroll)	#Because the window isnt actually resized until the function ends, so call the update after that
 	
-def makeInternalFoldoutFrame(main,parent,buttonText,isOpen=False):
-	
+def makeInternalFoldoutFrame(main,parent,buttonText,isOpen=False):	#only used by input selection annotation for targets
 	totalFrame = ThemedFrame(parent,style="gBorder.TFrame")
 	ID = len(main.foldoutFrameReferenceList)
 	
 	iconButtonFA = ThemedFrame(totalFrame)
-	iconButtonFA.pack(fill="x",expand=True,padx=main.frameBorderSize,pady=main.frameBorderSize)	#With themed widgeds THIS (padding) is necessary to SEE the border
+	iconButtonFA.pack(fill="x",expand=False,padx=main.frameBorderSize,pady=main.frameBorderSize)	#With themed widgeds THIS (padding) is necessary to SEE the border
 	
 	fbl = ThemedButton(iconButtonFA,text=buttonText,command=lambda i=ID: openInternalFoldout(main,i),style="internalDropClosed.TButton")
 	fbl.bind("<Return>",lambda event, i=ID: main.openFoldout(i))	#Space is bound by default to activate buttons, return is not!
@@ -296,80 +310,32 @@ def makeInternalFoldoutFrame(main,parent,buttonText,isOpen=False):
 	
 	main.foldoutFrameReferenceList.append((fbl,fbv,fbi,foldOutFrame,totalFrame))
 	main.foldoutStates.append(False)
-	
+	#print(f"[func] Created fouldout with ID {ID} and open-state {main.foldoutStates[ID]}")
 	if isOpen: openInternalFoldout(main,ID)
 	parent.internalTextvar = internalTextvar
 	return totalFrame,foldOutFrame,internalTextvar
 
-def openOptionFoldout(main,foldoutID):	#call to toggle thefoldout buttons with ID	#TODO remove
-	fouldoutFrameTuple = main.foldoutFrameReferenceList[foldoutID]
-	
-	if main.foldoutStates[foldoutID]:
-		main.foldoutStates[foldoutID]=False
-		#fouldoutFrameTuple[0].configure(style="internalDropClosed.TButton")
-		#fouldoutFrameTuple[1].configure(style="internalDropClosed.TButton")
-		fouldoutFrameTuple[1]["image"]=main.boxImage#main.triDownB
-		fouldoutFrameTuple[2].pack_forget()
-		#fouldoutFrameTuple[4].configure(style="Raised.TFrame")	#change relief of frame where all the buttons and foldou are on
-	else:
-		main.foldoutStates[foldoutID]=True
-		#fouldoutFrameTuple[0].configure(style="internalDropOpen.TButton")
-		#fouldoutFrameTuple[1].configure(style="internalDropOpen.TButton")
-		fouldoutFrameTuple[1]["image"]=main.xBoxImage#main.triUpB
-		fouldoutFrameTuple[2].pack(anchor="n",expand=True,fill="x",side="top")
-	
-	#main.mainWindow.after(10,main.updateParamScroll)	#Because the window isnt actually resized until the function ends, so call the update after that
-
-def makeOptionFoldoutFrame(main,parent,buttonText,isOpen=True):
-	
+def makeParameterToggleFrame(main,parent,heading):	#only used by dsp_eval, but doesnt need to be foldouts anymore
 	totalFrame = ThemedFrame(parent,style="wBorder.TFrame")
 	insetFrame = ThemedFrame(totalFrame,style="wBorder.TFrame")
 	insetFrame.pack(expand=True,fill="both",padx=main.frameBorderSize,pady=main.frameBorderSize)
-	ID = len(main.foldoutFrameReferenceList)
 	
-	iconButtonFA = ThemedFrame(insetFrame)
-	iconButtonFA.pack(fill="x",expand=True)#,padx=main.frameBorderSize,pady=main.frameBorderSize)	#With themed widgeds THIS (padding) is necessary to SEE the border
+	headerFrame = ThemedFrame(insetFrame)
+	headerFrame.pack(fill="x",expand=True)#,padx=main.frameBorderSize,pady=main.frameBorderSize)	#With themed widgeds THIS (padding) is necessary to SEE the border
 	
-	fbl = ThemedButton(iconButtonFA,text=buttonText,command=lambda i=ID: openOptionFoldout(main,i),style="optionDropClosed.TButton")
-	fbl.bind("<Return>",lambda event, i=ID: main.openFoldout(i))	#Space is bound by default to activate buttons, return is not!
-	fbl.pack(anchor="w",expand=True,fill="both",side="left")	#,padx=0,pady=0 buttons (the text within them) are naturally padded
+	ThemedLabel(headerFrame,text=heading,style="Medium.TLabel",anchor="w").pack(anchor="w",expand=True,fill="both",side="left")
 	
-	fbi = ThemedButton(iconButtonFA,command=lambda i=ID: openOptionFoldout(main,i),style="optionDropClosed.TButton",image=main.boxImage)#main.triDownB)
-	fbi.bind("<Return>",lambda event, i=ID: main.openFoldout(i))
-	fbi.pack(anchor="e",fill="y",side="left")
+	wantGraphVar = BooleanVar(value=True)
+	createTogglebutton(main,headerFrame,wantGraphVar).pack(anchor="e",fill="y",side="left")
 	
-	foldOutFrame = ThemedFrame(insetFrame)
-	
-	main.foldoutFrameReferenceList.append((fbl,fbi,foldOutFrame,totalFrame))
-	main.foldoutStates.append(False)
-	
-	if isOpen: openOptionFoldout(main,ID)
-	
-	return totalFrame,foldOutFrame,ID
-
-def addLibIDSelectionMenu(main,parentFrame,ppt=None,evalType=None):
-	
-	totalFrame = ThemedFrame(parentFrame,style="wBorder.TFrame")
-	insetFrame = ThemedFrame(totalFrame,style="gBorder.TFrame")
-	insetFrame.pack(expand=True,fill="x",padx=main.frameBorderSize,pady=main.frameBorderSize,anchor="nw")
-	
-	ThemedLabel(insetFrame,text="Select libraries").pack(fill="x",expand=True,anchor="nw")
-	libIDSelectionFrame = ThemedFrame(insetFrame)
-	libIDSelectionFrame.pack(fill="x",expand=True,anchor="nw")
-	libIDSelectionFrame.columnconfigure(0,weight=1,uniform="fred")
-	libIDSelectionFrame.columnconfigure(1,weight=1,uniform="fred")
-	libIDSelectionFrame.ppt=ppt
-	libIDSelectionFrame.evalType=evalType
-	valueDict = dict()
-	libIDSelectionFrame.valueDict = valueDict
-	main.libIDSelectionFrames.append(libIDSelectionFrame)
-	
-	return totalFrame,valueDict
-	
+	parameterFrame = ThemedFrame(insetFrame)
+	parameterFrame.pack(anchor="n",expand=True,fill="x",side="top")
+	return totalFrame,parameterFrame,wantGraphVar
 
 def addOutputGraphicsGroup(main,key):	#add new notebook for graphs with the same target/key to the graphicla output
+	#print(f"\n[Fun] Output Graphics Groups: {main.outputGroups}\n")
+	#print(f"\n[Fun] New Key: {key}\n")
 	if not key in main.outputGroups:	#but dont overwrite existing; just add graphs to the notebook (that was created by another function)
-		
 		keyBaseFrame = ThemedFrame(main.outputGraphicsNotebook,style="TEST.TFrame")
 		main.outputGraphicsNotebook.add(keyBaseFrame,text=str(key),sticky="news")
 		#keyNotebook = Notebook(main.outputGraphicsNotebook)
@@ -387,20 +353,11 @@ def scrollGraphicsOutput(main,key,*args):
 	for canvas in main.outputGroups[key][2]:
 		canvas.yview(*args)
 
-def addLibID(main,libID):	#Creates toggles for each library
-	print("[main func] \n\nERRORERRORERROR, this shouldnt be called anymore!\n\n\n")
-	row = len(main.libOverrides.keys())
-	main.libOverrides[libID] = BooleanVar()
-	main.libOverrides[libID].set(True)
-	ThemedLabel(main.libOverrideFrame,text=libID,anchor="w").grid(column=0,row=row,sticky="w")
-	createTogglebutton(main,main.libOverrideFrame,main.libOverrides[libID]).grid(column=1,row=row,sticky="e")
-	main.libOverrideFrame.rowconfigure(row,weight=1,uniform="fred")
-
 def deleteLenCovColPair(main,index):
 	#print("[main func] Deleting libID-pair "+str(index)+": "+str(pairList[index][1].get())+" "+str(pairList[index][2].get()))
 	main.multiCovColpairList[index][0].destroy()
 	main.multiCovColpairList[index]=None
-	#main.getMain().after(10,main.updateParamScroll)
+	#main.getMain().after(10,main.updateParamScroll)	#thisframe also needs a scrollbar
 
 def addLenCovColPair(main,length=None, colour=None, updateView=True):
 	pairList=main.multiCovColpairList
@@ -429,4 +386,38 @@ def addLenCovColPair(main,length=None, colour=None, updateView=True):
 	
 	pairFrame.pack(fill="x",side="top",padx=main.frameBorderSize)#,pady=main.frameBorderSize)
 	pairList.append([pairFrame,lenVar,colVar])	#frame to delete from gui, vars to build graphs; when deleted is set to None
+
+def loadModules(main):
+	try:
+		moduleDir = os.path.join(main.execPath,"processing")
+		files = os.listdir(moduleDir)
+	except Exception as e:
+		main.writeError("ERROR! Exception getting processing modules from "+str(main.execdir))
+		main.writeError(str(e))
+		return False
+	print(f"[main func] loading modules from {moduleDir}")
+	moduleDict = dict()
+	for entry in files:
+		try:
+			if os.path.isfile(os.path.join(moduleDir,entry)):
+				main.writeWarning("Warning! The module directory should not contain files! "+str(entry))
+				continue
+			elif entry.startswith("__"):continue
+			else:
+				moduleBase = os.path.join(moduleDir,entry)
+				moduleMain = os.path.join(moduleBase,"main.py")
+				if not os.path.isfile(moduleMain):
+					main.writeError("ERROR! Found a module, but no main file "+str(moduleMain))
+					return False
+				moduleName = f"processing.{entry}.main"
+				module = import_module(moduleName)
+				moduleID = module.moduleID
+				moduleDict[moduleID] = module
+				
+				main.writeLog(f"Imported module {moduleID} from {moduleName}")
+		except Exception as e:
+			main.writeError("ERROR! Exception with "+str(os.path.join(moduleDir,entry)))
+			main.writeError(str(e))
+			continue
+	return moduleDict
 

@@ -37,7 +37,7 @@ class InteractiveGraph:
 		
 		self.myGraphStats = StringVar()
 		self.myGraphStats.set("")
-		ThemedEntry(graphFrame,textvariable=self.myGraphStats,state="readonly").pack(fill="both")
+		ThemedEntry(graphFrame,textvariable=self.myGraphStats,state="readonly",style="RText.TEntry").pack(fill="both")
 		
 		self.canvas = Canvas(graphFrame,width=self.width,height=self.height,bg=self.main.graphBackgroundColour,highlightthickness=0)
 		self.canvas.pack()
@@ -300,8 +300,8 @@ class InteractiveGraph:
 			self.xzero = self.xbase+abs(self.minx*self.xdataToPix)
 			self.yzero = self.ybase-abs(self.miny*self.ydataToPix)
 			
-			print("[IG - SCATTER] X-Axis: "+str(self.minx)+" - "+str(self.maxx)+", "+str(self.xbins)+" * "+str(self.xstep)+", "+str(self.xdataToPix))
-			print("[IG - SCATTER] Y-Axis: "+str(self.miny)+" - "+str(self.maxy)+", "+str(self.ybins)+" * "+str(self.ystep)+", "+str(self.ydataToPix))
+			#print("[IG - SCATTER] X-Axis: "+str(self.minx)+" - "+str(self.maxx)+", "+str(self.xbins)+" * "+str(self.xstep)+", "+str(self.xdataToPix))
+			#print("[IG - SCATTER] Y-Axis: "+str(self.miny)+" - "+str(self.maxy)+", "+str(self.ybins)+" * "+str(self.ystep)+", "+str(self.ydataToPix))
 			return
 		
 		ndatapoints = len(graphData)

@@ -44,13 +44,12 @@ class Main():
 		self.toggleButtonReferenceDict=dict()
 		
 		self.mainNotebooktabs = dict()
-		self.libIDSelectionFrames = list()
 		self.libOverrides = dict()	#TODO maybe replace all these with a single dict.....
 		self.comboGraphs = dict()
 		
-		self.pptList = list()	#added by sR_processing_GUI or other pre-processing scripts
-		self.mapTargets = ["-"]	#filled by adding targets!
-		self.evalTypes = ["-"]	#added by siI_eval and dsP_eval or other evaluation scripts
+		#self.pptList = list()	#added by sR_processing_GUI or other pre-processing scripts
+		self.mapTargets = list()	#["-"]	#filled by adding targets!
+		self.evalTypes = list()	#["-"]	#added by siI_eval and dsP_eval or other evaluation scripts
 		
 		self.PM = ParameterManager(self)
 		self.IM = InputManager()
@@ -61,13 +60,17 @@ class Main():
 		
 		print("[Main] Execution path: "+str(self.execPath))
 		if not projectPath is None:
-			self.PM.set("projectPath",projectPath)
-			functions.saveSettings(self)
-		self.loadDataIntoGUI()
-	
+			loadProject(self,projectPath)
+			#self.PM.set("projectPath",projectPath)
+			#functions.saveSettings(self)
+			#self.PM.loadParameterSets()
+		#self.loadDataIntoGUI()
 	def reset(self):
 		print("\n[Main] resetting everything")
+		self.foldoutFrameReferenceList = list()
+		self.styleman.reset()
 		self.PM.reset()
+		self.PM.clearPS()
 		self.IM.reset()
 		updateTargetListFrame(self)
 		print("[Main] done.\n")
@@ -80,8 +83,6 @@ class Main():
 		functions.writeError(self,text)
 	def writeWarning(self,text):
 		functions.writeWarning(self,text)
-	def checkInputParams(self,inputDict=None):
-		return functions.checkInputParams(self,inputDict=inputDict)
 	def getGraphicsOutput(self):
 		return self.outputGraphicsNotebook
 	def showGraphicsTab(self):
@@ -109,10 +110,7 @@ class Main():
 		self.outputTextField["state"]="disabled"
 	def fitCanvasWidthGraph(self,canvas):
 		boundBox = canvas.bbox("all")
-		#print("Canvas bounding box: "+str(boundBox))
-		canvas.configure(width = boundBox[2])
 		boundsAd = (boundBox[0],boundBox[1],boundBox[2],max(boundBox[3],self.mainNotebook.winfo_height()-100))	#2 because borders...
-		#print("DEBUG Output "+str(self.mainNotebook.winfo_height()))
 		canvas.configure(scrollregion = boundsAd)
 	
 	def fitCanvasWidth(self):
@@ -123,31 +121,51 @@ class Main():
 	def saveSettings(self):	#Dummy function
 		functions.saveSettings(self)
 	def loadDataIntoGUI(self):
-		#TODO make sure that this doesnt create new graphs, but updates them !
-		#TODO  ~ if loaded, update instead?
-		#or check them?
-		#or just delete them and make an extra button for displayupdates, but pipe always creates new ones?
 		return functions.loadDataIntoGUI(self)
 	def exportGraphs(self):
 		return functions.exportGraphs(self)
 	def terminateThreads(self):
 		self.killSignal[0] = True
-		print("Killing all running threads: "+str(self.killSignal[0]))
-		for (t,c) in self.runningThreads: t.join()
-		print("All threads closed")
-		self.runningThreads = list()
-		#self.killSignal[0] = False	#????
-		#print(len(self.runningThreads))
-		self.writeWarning("All Threads killed")
-		self.commsQueue.put(("WARN","All Threads killed"))
-	def exitProgramm(self):
-		self.terminateThreads()
-		print("exiting")
-		self.getMain().destroy()
+		if len(self.runningThreads)>0:
+			print("Killing all running threads: "+str(self.killSignal[0]))
+			for (t,c) in self.runningThreads: t.join()
+			print("All threads closed")
+			self.runningThreads = list()
+			self.writeWarning("All Threads killed")
+			self.commsQueue.put(("WARN","All Threads killed"))
 	def closeWindow(self):
 		self.terminateThreads()
-		print("exiting")
+		print("Exiting")
 		self.getMain().destroy()
+	
+	def runPipeline(main):
+		main.saveSettings()
+		
+		usedParameterSets = set()
+		for libID,lib in main.IM.getLibraries().items():
+			usedParameterSets.add(lib.ppt)	#only process the currently selected Parameterset
+		print(f"[main run] Found PS: {usedParameterSets}")
+		neededModules = set()
+		for psname in usedParameterSets:
+			neededModules.add(main.PM.getParameterSet(psname)[".moduleID"])
+		
+		main.tmp_run_modules = sorted(neededModules)
+		print(f"[main run] Needed modules: {main.tmp_run_modules}")
+		main.tmp_run_modules_index = 0
+		main.nextPPTModule()
+	
+	def nextPPTModule(main):
+		if main.tmp_run_modules is None or main.tmp_run_modules_index is None:return False
+		if main.tmp_run_modules_index >= len(main.tmp_run_modules):	#ran all modules
+			main.tmp_run_modules = None
+			main.tmp_run_modules_index = None
+			main.saveSettings()
+			main.loadDataIntoGUI()
+		else:
+			module = main.tmp_run_modules[main.tmp_run_modules_index]
+			main.tmp_run_modules_index+=1
+			main.moduleDict[module].run(main)
+	
 	def runCommand(self,stepID,commands,reqFiles,genFiles,libIDs,stdoutFiles=None,stderrFiles=None,grep=[],grepRequireOr=[],force=False,libraries=None):	#new thread
 		if force:
 			self.commsQueue.put(("WARN","Warning: Forcing the step overwrites all existing output for that step"))
@@ -159,7 +177,7 @@ class Main():
 			self.commsQueue.put(("WARN","         Please run all other steps with force to ensure that the results are updated"))
 	
 	def checkForLogUpdates(self):	#TODO actually checks for all kinds of updates, i.e. queueUpdates; move to dedicated class
-		print(f"\t\tChecking for updates {time.ctime()} {self.runningThreads}")
+		#print(f"\t\t[Main] Checking for updates {time.ctime()} {self.runningThreads}")
 		while not self.commsQueue.empty():
 			item = self.commsQueue.get()
 			#print("\t"+str(item))
@@ -176,7 +194,7 @@ class Main():
 			elif item[0] == "LOG":self.writeLog(item[1])
 				
 		if len(self.runningThreads)>0:		#runs comms between the threads and the GUI as long as there are some (should only ever be one anyway)
-			self.getMain().after(200,self.checkForLogUpdates)
+			self.getMain().after(300,self.checkForLogUpdates)
 		elif len(self.runningThreads)==0:	# if ~runPipeline, start the next step...
 			pass				# OR use extra thread that waits ? and also listens to the kill?
 	

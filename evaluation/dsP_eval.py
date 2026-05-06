@@ -1,6 +1,5 @@
 
 import os.path
-from pathlib import Path
 
 import evaluation.loadGraphs as lg
 from functions.baseFunctions import getReverseSeq
@@ -10,30 +9,30 @@ from functions.baseFunctions import getReverseSeq
 def exportGraphs(main):
 	print("\n[siGUI] Exporting graphs")
 	main.writeLog("\n-------------------------------------------------------\nExporting graphs")
-	resultDir = os.path.join(main.PM.get("projectPath"),"5_graphics")
-	Path(resultDir).mkdir(parents=True, exist_ok=True)
 	
-	if not main.checkInputParams():return False
-	#lg.setStyles(main,getColours(main))
-	lg.exportGraphs(main,resultDir,main.PM.get("exportOverrideWidth"),main.PM.get("exportOverrideHeight"),
+	if not main.PM.validateTags(["graphics"]):
+		main.writeWarning("Error validating graphic parameters.")
+		return False
+	lg.exportGraphs(main,main.PM.get("exportOverrideWidth"),main.PM.get("exportOverrideHeight"),
 		fontMultiplier=main.PM.get("fontMultiplierSVG"))
 	print("\n[siGUI] ...done.")
 	
 def displayGraphs(main):
 	print("\n[siGUI] Displaying graphs")
 	main.writeLog("\n-------------------------------------------------------\nDisplaying graphs")
-	resultDir = os.path.join(main.PM.get("projectPath"),"5_graphics")
 	
-	if not main.checkInputParams():return False
-	#main.resetGraphicsOutput()	#TODO keep track of generated graphics and reset only the ones that are re-generated..
-	#lg.setStyles(main,getColours(main))	#TODO is for update...
-	if lg.showGraphs(main,resultDir,main.PM.get("fontMultiplierGUI")):
+	if not main.PM.validateTags(["graphics"]):
+		main.writeWarning("Error validating graphic parameters.")
+		return False
+	if lg.showGraphs(main,main.PM.get("fontMultiplierGUI")):
 		main.mainNotebook.select(main.graphicsTabIndex)
 	print("\n[siGUI] ...done.")
 
-def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TODO unused!
-	if export:
-		Path(resultDir).mkdir(parents=True, exist_ok=True)
+def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TODO update this to the new system
+	#if export:
+	#	Path(resultDir).mkdir(parents=True, exist_ok=True)	#make a extra dir for text output
+	#	resultDir = os.path.join(main.PM.get("projectPath"),"~Output",bundleID,psname)
+	#	Path(resultDir).mkdir(parents=True, exist_ok=True)
 	
 	#---------------------- Create tabular output -------------------
 	print("[siGUI] Writing esiRNA expression stats")
@@ -80,8 +79,8 @@ def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TOD
 				if "_gs" in esiRNA[2] or "_ps" in esiRNA[2]:
 					header+="\t"+esiRNA[2]+"-5\t"+esiRNA[2]+"-3"
 		outText = ""+header
-		for lenOffset in range(5,-6,-1):	#TODO parameter
-			outText+="\n"+str(21+lenOffset)	#TODO
+		for lenOffset in range(5,-6,-1):	# parameter
+			outText+="\n"+str(21+lenOffset)	#
 			for strand in [0,1]:
 				for esiRNA in basegui.annotation[strand]:	#start	length	label
 					#if "_gs" in esiRNA[2] or "_ps" in esiRNA[2]:
@@ -99,42 +98,35 @@ def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TOD
 	print("Done")
 
 def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highlightStyles=None):
-	if not main.checkInputParams():return False
-	
-	countDir = os.path.join(main.projectPath,"4_results")
-	resultDir = os.path.join(main.projectPath,"5_graphics")
 	
 	print("\n[siGUI] Loading data")
 	main.writeLog("\n-------------------------------------------------------\nLoading data")
-	#main.resetGraphicsOutput()	#dont delete everything
-	main.showTextOutputTab()
-	#main.resetTextOutput()
 	
 	grouping = dict()
+	print(f"[dsP eval] {selectedLibIDs}")
 	for libID in selectedLibIDs:
 		try:
-			targetBundleIDs = main.IM.getLib(libID).mapTargets
-			for bundleID in targetBundleIDs:
-				target = main.IM.getTarget(bundleID).bundleID
-				print(target)
+			print(f"[dsP eval] {main.IM.getLib(libID).getCountfiles()}")
+			for target in main.IM.getLib(libID).getCountfiles():	#target = (bundleID,psname)
+				if not target[1] == main.IM.getLib(libID).ppt:continue	#only draw the currently selected Parameterset
 				if not target in grouping:grouping[target] = list()
 				grouping[target].append(libID)
 		except:
-			print(f"Error, problem with finding targets for {libID}: {main.IM.getLib(libID).mapTargets}; {main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).mainSeqID}")
+			print(f"Error, problem with finding targets for {libID}: {main.IM.getLib(libID).getCountfiles()}")
 		
 	print(f"\n[dsP eval] Groups: \n"+"\n".join([f"{key}:\t{value}" for key,value in sorted(grouping.items())])+"\n")
-	for bundleID,libIDs in sorted(grouping.items()):
-		countFile = os.path.join(countDir,bundleID+"_$libID_readcounts.tsv")
-		print(f"Countfile: {countFile}")
-		print(main.IM.getLib(libIDs[0]).mapTargets[0])
-		print(main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
+	for (bundleID,psname),libIDs in sorted(grouping.items()):
+		
+		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
+		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
+		print(f"[dsP eval] Countfile: {countFile}")
 		countData = lg.loadCounts(main,countFile,libIDs,main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
 		if countData is None or countData is False: 
 			print("Error, data is None!")
 			main.writeError("Error while reading counts from file! {countFile}")
 			continue
 		
-		siRNAPos = [dict(),dict()]	#TODO remove this! probably and just use the annotation
+		siRNAPos = [dict(),dict()]	#TODO this is somewhat redundant with annotation
 		if not main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation is None:
 			for strand,entrylist in enumerate(main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation):
 				for feature in entrylist:
@@ -147,10 +139,11 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 		for dic in wantedgraphs:
 			dic["mainTargetSeqID"] = main.IM.getTarget(bundleID).mainSeqID	#mainTarget
 			dic["bundleID"] = bundleID	#mainTarget
+			dic["psname"] = psname
 		#TODO fix highlightStyles, do we still need that?	highlightStyles is used to colour the bars, cols from graphdef is used for the legend. ????
 		lg.loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation,highlightStyles=highlightStyles)
 		
-		#giveTextOutput(main,countData,resultDir,selectedLibIDs,export=export)	#TODO test and re-activate
+		#giveTextOutput(main,countData,resultDir,selectedLibIDs,export=export)	#TODO doesnt work right now
 		
 	if gui:displayGraphs(main)
 	return True

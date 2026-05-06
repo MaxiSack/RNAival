@@ -13,6 +13,7 @@ class StyleManager:
 		self.mainWindow = self.main.mainWindow
 		
 		self.registredStyledTextFields = list()
+		self.registredOptionMenus = list()
 		
 		self.main.headerfont = "System 24 bold"
 		self.main.notebookTextFont = "System 14 bold"
@@ -24,15 +25,15 @@ class StyleManager:
 		#----------------------- figure out OS-based scaling -----------------------
 		fontObj = Font(root=self.mainWindow,font="System 10")
 		standardSize = fontObj.measure("0")
-		print("[Style] Standardsize (0): "+str(standardSize))
+		#print("[Style] Standardsize (0): "+str(standardSize))
 		self.main.osScaleFactor = (standardSize/8.0)	#this seems to be a good estimate of how the OS+TKinter automatically scale fonts for 4k displays
-		print("[Style] Scalefactor detected: "+str(self.main.osScaleFactor))	#but all other margins ans paddings need to be scaled manually
+		#print("[Style] Scalefactor detected: "+str(self.main.osScaleFactor))	#but all other margins ans paddings need to be scaled manually
 		self.main.osScaleFactorInt = int(round(self.main.osScaleFactor,0))
-		print("[Style] Scalefactor int: "+str(self.main.osScaleFactorInt))
+		#print("[Style] Scalefactor int: "+str(self.main.osScaleFactorInt))
 		self.main.standardFontWidth = int(round(fontObj.measure("0")/self.main.osScaleFactor,0))
 		self.main.frameBorderSize = int(round(4 * self.main.osScaleFactor,0))
 		self.main.notebookPadding = int(round(2 * self.main.osScaleFactor,0))
-		print("[Style] Borderwidth: "+str(self.main.frameBorderSize))
+		#print("[Style] Borderwidth: "+str(self.main.frameBorderSize))
 		
 		#----------------------- load sprites -----------------------
 		self.triDownW = PhotoImage(file = os.path.join(execPath,"sprites/ArrowDownWhite.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
@@ -57,9 +58,7 @@ class StyleManager:
 		
 		#----------------------- Style -----------------------
 		self.mystyle = Style()
-		print("[Style] Available themes: "+str(self.mystyle.theme_names()))
-		self.mystyle.theme_use("alt")	#('clam', 'alt', 'default', 'classic')	#clam has no relief options
-		print("[Style] Theme selected: "+str(self.mystyle.theme_use()))
+		self.mystyle.theme_use("alt")	#'clam', 'alt', 'default', 'classic'	#clam has no relief options
 		self.applyTheme(initialTheme)
 		
 	
@@ -69,24 +68,27 @@ class StyleManager:
 			self.textSelectedColour = "#000000"
 			self.textSelectedBackgroundColour = "#22dd77"
 			self.buttonTextColour = "#ffffff"
-			self.buttonColour = "#339966"		#"#00c878"	#too bright
-			self.buttonHighlightColour = "#33aa77"	#"#6bffc4"
 			self.foldoutButtonClosed = "#228855"
 			self.foldoutButtonOpen = "#22aa55"
 			self.radioUnselectedColour = "#000000"
 			self.radioSelectedColour = "#00ff00"
 				
 			if theme == "light":#sky+juicy green
+				self.buttonColour = "#339966"
+				self.buttonDarkColour = "#117744"
+				self.buttonHighlightColour = "#33aa77"
+				
 				self.textColour = "#000000"
 				self.textBackgroundColour = "#ffffff"
-				self.backgroundColour = "#ddddee"
+				self.textReadonlyBackgroundColour = "#d4cccc"
+				self.backgroundColour = "#e2e2f2"
 				
 				self.main.graphBackgroundColour = "#ffffff"
 				self.main.graphLineColour = "#000000"
 				self.main.graphBarColour = "#444444"
 				self.main.graphBarFillColour = "#ccccff"
 				
-				self.exitCol = "#aa0000"#"#cc0000"
+				self.exitCol = "#aa0000"
 				self.highlightExitCol = "#ff4444"
 				
 				self.main.boxImage = self.boxImage_b
@@ -94,9 +96,14 @@ class StyleManager:
 				self.main.triDown = self.triDownB
 				self.main.triUp = self.triUpB
 				
-			elif theme == "dark":#dark
-				self.textColour = "#e2e2e2"
+			elif theme == "dark":#black+dark turquoise
+				self.buttonColour = "#226955"
+				self.buttonDarkColour = "#115935"
+				self.buttonHighlightColour = "#207f66"
+				
+				self.textColour = "#e6e6e6"
 				self.textBackgroundColour = "#111111"
+				self.textReadonlyBackgroundColour = "#443333"
 				self.backgroundColour = "#222222"
 				
 				self.main.graphBackgroundColour = "#111111"
@@ -128,16 +135,13 @@ class StyleManager:
 			self.mystyle.configure("Medium.TLabel",font="System 14 bold")
 			self.mystyle.configure("TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="raised",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
 			self.mystyle.map("TButton",background=[("active",self.buttonHighlightColour)])
+			self.mystyle.configure("Selected.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="sunken",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
+			self.mystyle.map("Selected.TButton",background=[("active",self.buttonHighlightColour)])
 			self.mystyle.configure("Exit.TButton",background=self.exitCol)
 			self.mystyle.map("Exit.TButton",background=[("active",self.highlightExitCol)])
 			
 			self.mystyle.configure("bg.TButton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,relief="raised",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
 			self.mystyle.map("bg.TButton",background=[("active",self.textBackgroundColour)])
-			#self.mystyle.configure("TMenubutton",relief="raised",borderwidth=self.main.frameBorderSize-1)
-			#self.mystyle.configure("TCombobox",fieldbackground="red",background="blue",foreground="green",padding=5,font=("Helvetica",12))
-			#self.mystyle.configure("TMenubutton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour)
-			#self.mystyle.map("TMenubutton",background=[("active",self.backgroundColour)])
-			#TMenubutton popup is still unstyled!
 			
 			self.mystyle.configure("DropClosed.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonClosed,relief="flat",anchor="w")
 			self.mystyle.configure("DropOpen.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonOpen,relief="flat",anchor="w")
@@ -156,15 +160,17 @@ class StyleManager:
 			self.mystyle.map("TRadiobutton",background=[("active",self.buttonHighlightColour)],indicatorcolor=[("selected",self.radioSelectedColour)])	#,indicatorbackground=buttonHighlightColour doesnt work
 			self.mystyle.configure("TEntry",font=self.main.textFont,foreground=self.textColour,fieldbackground=self.textBackgroundColour,insertcolor=self.textSelectedBackgroundColour,
 				selectbackground=self.textSelectedBackgroundColour,selectforeground=self.textSelectedColour,insertwidth=3)
-			self.mystyle.map("TEntry",fieldbackground=[("readonly",self.textBackgroundColour)])
+			self.mystyle.map("TEntry",fieldbackground=[("readonly",self.textReadonlyBackgroundColour)])
+			self.mystyle.configure("RText.TEntry",font=self.main.textFont,foreground=self.textColour,fieldbackground=self.textBackgroundColour,insertcolor=self.textSelectedBackgroundColour,
+				selectbackground=self.textSelectedBackgroundColour,selectforeground=self.textSelectedColour,insertwidth=3)
+			self.mystyle.map("RText.TEntry",fieldbackground=[("readonly",self.textBackgroundColour)])
 			self.mystyle.configure("TScrollbar",background=self.buttonColour,arrowcolor=self.buttonHighlightColour,troughcolor=self.backgroundColour)#,lightcolor="red",darkcolor="green",relief="raised",borderwidth=10)
 			self.mystyle.map("TScrollbar",background=[("active",self.buttonHighlightColour)])
 			
 			self.mystyle.configure("TNotebook",background=self.backgroundColour)
-			self.mystyle.configure("TNotebook.Tab",foreground=self.buttonTextColour,background=self.buttonColour,font=self.main.notebookTextFont,
-				padding = (self.main.notebookPadding*2,0,self.main.notebookPadding*2,0))
-				#padding = (self.main.notebookPadding,self.main.notebookPadding,self.main.notebookPadding,self.main.notebookPadding))#self.main.notebookPadding)	#padding is w,n,e,s
-			self.mystyle.map("TNotebook.Tab",background = [("selected",self.buttonHighlightColour)],
+			self.mystyle.configure("TNotebook.Tab",foreground=self.buttonTextColour,background=self.buttonDarkColour,font=self.main.notebookTextFont,
+				padding = (self.main.notebookPadding*2,0,self.main.notebookPadding*2,0))	#padding is w,n,e,s
+			self.mystyle.map("TNotebook.Tab",background = [("selected",self.buttonColour)],
 				padding = [("selected",(self.main.notebookPadding*4,self.main.notebookPadding,self.main.notebookPadding*4,self.main.notebookPadding))])#,foreground = [("selected",self.buttonTextColour)])
 			
 			#file select menue is partially styled ~ bg + fg + fontsize
@@ -175,6 +181,7 @@ class StyleManager:
 			textfield.configure(bg=self.textBackgroundColour,fg=self.textColour,selectbackground=self.textSelectedBackgroundColour,
 				selectforeground=self.textSelectedColour)
 		
+		#These are used by parameters and are not project dependent (static)
 		for tbl,boolVar in self.main.toggleButtonReferenceDict.values():
 			if boolVar.get(): 
 				for tb in tbl:
@@ -182,6 +189,8 @@ class StyleManager:
 			else: 
 				for tb in tbl:
 					tb["image"]=self.main.boxImage
+		
+		#These are only used for annotation and therefore project-dependent (dynamic)
 		for foldoutID,frameRef in enumerate(self.main.foldoutFrameReferenceList):
 			if len(frameRef)==4:
 				fbi = frameRef[1]
@@ -191,7 +200,13 @@ class StyleManager:
 				fbi = frameRef[2]
 				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.triUp
 				else: fbi["image"]=self.main.triDown
-	
+		
+		#These are only used for libraries and therefore project-dependent (dynamic)
+		for optionMenu in self.registredOptionMenus:
+			optionMenu.config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+	def reset(self):
+		self.registredOptionMenus = list()
 	
 	def getStyledText(self,parent):
 		textfield = Text(parent,state="disabled",font=self.main.logFont,bg=self.textBackgroundColour,fg=self.textColour,selectbackground=self.textSelectedBackgroundColour,

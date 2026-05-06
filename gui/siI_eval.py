@@ -11,8 +11,6 @@ from tkinter.ttk import Scrollbar as ThemedScrollbar
 from tkinter.ttk import Radiobutton as ThemedRadioButton
 from tkinter.ttk import Entry as ThemedEntry
 
-#from gui.functions import addLibIDSelectionMenu
-import gui.functions as fun	# addLibIDSelectionMenu	#This gets around circular imports..
 from evaluation.siI_eval import loadDataIntoGUI
 from evaluation.dsP_eval import exportGraphs
 from graphs.drawGraphics import multiplyColour,isHexColour
@@ -67,7 +65,7 @@ def addLibToPair(main,libID,pair,isControl,parent):	#TODO check that newly added
 		command = lambda libID=libID,pair=pair,isControl=isControl:deleteLibFromPair(libID,pair,isControl),style="Exit.TButton").pack(side="right",anchor="ne")
 
 def addPair(main,pairLoad=None,updateView=True):
-	print(f"[siI GUI] Adding pair: {pairLoad}")
+	#print(f"[siI GUI] Adding pair: {pairLoad}")
 	pairFrame = ThemedFrame(main.pairListFrame)
 	main.pairListFrame.pairChildren.append(pairFrame)
 	#print(main.IM.getLibraries())
@@ -93,12 +91,14 @@ def addPair(main,pairLoad=None,updateView=True):
 		#the arguments contains the value (.get()) of the OptionMenu's variable
 		mm1 = OptionMenu(positiveLibsFrame,libPosVar,*availableLibIDs,command = lambda libID,main=main,pair=pair,positiveLibsFrame=positiveLibsFrame:addLibToPair(main,libID,pair,0,positiveLibsFrame))
 		mm1.pack(fill="x",anchor="nw")
+		main.styleman.registredOptionMenus.append(mm1)
 		mm1.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 		mm1["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 		
 		libNegVar = StringVar(value="-")
 		mm2 = OptionMenu(negativeLibsFrame,libNegVar,*availableLibIDs,command = lambda libID,main=main,pair=pair,negativeLibsFrame=negativeLibsFrame:addLibToPair(main,libID,pair,1,negativeLibsFrame))
 		mm2.pack(fill="x",anchor="nw")
+		main.styleman.registredOptionMenus.append(mm2)
 		mm2.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 		mm2["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 	
@@ -182,7 +182,7 @@ def add_siI_eval_GUI(main):
 	
 	main.pairListFrame.pack(fill="x",side="top",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
-	ThemedButton(siIEvalFrame,text="Load data",command=lambda main=main,export = False: loadData(main,export=export)).grid(row=2,column=0,columnspan=3,sticky="news")
-	ThemedButton(siIEvalFrame,text="Export graphs",command=lambda main=main:exportGraphs(main)).grid(row=3,column=0,columnspan=3,sticky="news")
+	#ThemedButton(siIEvalFrame,text="Load data",command=lambda main=main,export = False: loadData(main,export=export)).grid(row=2,column=0,columnspan=3,sticky="news")
+	#ThemedButton(siIEvalFrame,text="Export graphs",command=lambda main=main:exportGraphs(main)).grid(row=3,column=0,columnspan=3,sticky="news")
 	
 	

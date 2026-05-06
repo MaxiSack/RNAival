@@ -34,7 +34,7 @@ class Combograph:
 		self.title = title
 		self.groupID = groupID	#key for main.outputGroups -> notebook
 		self.main = main
-		print("\n[Combo] Creating combograph "+str(self.title))
+		#print("[Combo] Creating combograph "+str(self.title))
 		
 		self.pointRadius = 10	#TODO allow setting from GUI
 		
@@ -170,6 +170,7 @@ class Combograph:
 		
 		if self.graphFrame is None:
 			notebook,scrollbar,scrollList = fun.addOutputGraphicsGroup(main,self.groupID)
+			#print(f"[Combo] generating new Tab {self.groupID}")
 			self.graphFrame = ThemedFrame(notebook,style="TEST.TFrame")
 			notebook.add(self.graphFrame,text=self.title)
 			
@@ -180,9 +181,10 @@ class Combograph:
 			self.graphFrame2 = ThemedFrame(self.graphCanvas,style="TEST.TFrame")
 			self.graphCanvas.create_window((0,0),window=self.graphFrame2,anchor="nw")
 			
-			ThemedLabel(self.graphFrame2,text=self.title,style="Medium.TLabel").pack(fill="x",anchor="nw",expand=True)
+			ThemedLabel(self.graphFrame2,text=self.title+" - "+self.groupID,style="Medium.TLabel").pack(fill="x",anchor="nw",expand=True)
 			
-			#main.mainWindow.after(1000,lambda canvas=self.graphCanvas: main.fitCanvasWidthGraph(canvas))	#TODO requried for the scrollbar?, test later !
+			#required for scrolling, set the scrollregion to the new content of the canvas
+			main.mainWindow.after(1000,lambda canvas=self.graphCanvas: main.fitCanvasWidthGraph(canvas))
 		
 		#self.IGdict = dict()	#TODO dont delete Combos and IGs, just re-draw them ! (in a different function)
 		#genIGs should only be called once ! or again if we pop-out the window!
@@ -209,7 +211,7 @@ class Combograph:
 				newGraph.overrideColours(self.colouroverride[graphName])
 	
 	def drawOntoGui(self,fontMultiplier=1.0):
-		print("\n[Combo] Drawing IGs of combograph "+str(self.title)+" onto GUI")
+		#print("[Combo] Drawing IGs of combograph "+str(self.title)+" onto GUI")
 		for graphName,newGraph in self.IGdict.items():
 			newGraph.drawGraph(fontMultiplier=fontMultiplier)
 	

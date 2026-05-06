@@ -38,9 +38,6 @@ def getColours(main):	# ------------------ colours ------------------------
 	return highlightStyles
 
 def getWantedgraphs(main):
-	if not main.checkInputParams():
-		main.writeWarning("Error validating graphic parameters.")
-		return False
 	
 	#Graphs to generate, "Esi" graphs highlight the esiRNAs using the annotations
 	wantedgraphs = list()
@@ -50,10 +47,8 @@ def getWantedgraphs(main):
 	
 	hideLL = main.PM.get("hideLabelsLegends")
 	
-	#TODO dont need foldouts anymore !
-	
 	# ------------------- length distribution -------------------
-	if main.foldoutStates[main.graphicStateIDs["graphLenDistID"]]:
+	if main.selectedDSPGraphTypes["graphLenDistID"].get():
 		graphDef=dict()
 		graphDef[0]="lendist"
 		graphDef["minL"] = int(main.PM.get("lenDistMinLen"))
@@ -78,7 +73,7 @@ def getWantedgraphs(main):
 	#TODO save with different names depending on params??
 	
 	# ------------------- esiRNA counts -------------------
-	if main.foldoutStates[main.graphicStateIDs["esiCountGraphID"]]:
+	if main.selectedDSPGraphTypes["esiCountGraphID"].get():
 		graphDef=dict()
 		graphDef[0]="esiCounts"
 		graphDef["xlabSpace"] = int(main.PM.get("esiCountXLabSpace"))
@@ -99,7 +94,7 @@ def getWantedgraphs(main):
 			wantedgraphs.append(graphDef2)
 	
 	# ------------------- single-length startPos -------------------
-	if main.foldoutStates[main.graphicStateIDs["graphStartLengthID"]]:
+	if main.selectedDSPGraphTypes["graphStartLengthID"].get():
 		for lenStr in main.PM.get("startPosLengths"):
 			graphDef=dict()
 			graphDef[0]="countsSingle"
@@ -120,8 +115,7 @@ def getWantedgraphs(main):
 				wantedgraphs.append(graphDef2)
 	
 	# ------------------- single-length Coverage -------------------
-	#lenCovHighlightEsiRNABool.get()
-	if main.foldoutStates[main.graphicStateIDs["graphCoverageLenID"]]:
+	if main.selectedDSPGraphTypes["graphCoverageLenID"].get():
 		for lenStr in main.PM.get("lencovLengths"):	#For coverage the highlighting "just works" because i also check the lengths
 			graphDef=dict()
 			graphDef[0]="coverageSingleEsi"
@@ -131,7 +125,7 @@ def getWantedgraphs(main):
 			graphDef["cols"] = [highlightStyles["esiGS"][0],highlightStyles["esiPS"][0],highlightStyles["pseudoGS"][0],highlightStyles["pseudoPS"][0]]
 			wantedgraphs.append(graphDef)
 			
-	if main.foldoutStates[main.graphicStateIDs["graphCoverageMultiID"]]:
+	if main.selectedDSPGraphTypes["graphCoverageMultiID"].get():
 		targetlist = list()
 		for i,pair in enumerate(main.multiCovColpairList):
 			if pair is None:continue
@@ -153,7 +147,7 @@ def getWantedgraphs(main):
 		wantedgraphs.append(graphDef)
 		
 	# ------------------- Heatmap -------------------
-	if main.foldoutStates[main.graphicStateIDs["graphHeatmapID"]]:
+	if main.selectedDSPGraphTypes["graphHeatmapID"].get():
 		graphDef=dict()
 		graphDef[0]="heapmapEsi"
 		graphDef["highlightEsis"] = main.PM.get("heatmapHighlightEsiRNABool")
@@ -184,9 +178,7 @@ def loadData(main,export=True,gui=True):
 	
 	
 	# ------------------- Library Selection -----------------------
-	for key,value in main.dsPLibIDSelection.items():
-		print(f"{key} {value.get()}")
-	selectedLibIDs = [key for key,value in main.dsPLibIDSelection.items() if value.get()]
+	selectedLibIDs = [libID for libID,lib in main.IM.getLibraries().items() if "dsP" in lib.evalTypes]
 	print(f"Selected Libraries:\n{selectedLibIDs}")
 	
 	highlightStyles=getColours(main)
@@ -219,18 +211,20 @@ def add_dsP_eval_GUI(main):
 	
 	ThemedLabel(dsPEvalFrame,text="Select types of graphs to generate",anchor="w").grid(row=0,column=0,columnspan=3,sticky="news")
 	
-	main.graphicStateIDs = dict()	#TODO remove foldoutframes!
-	#but still / also save which graphs and libraries have been selected!
+	main.selectedDSPGraphTypes = dict()
+	# also save which graphs and libraries have been selected!
 	
 	
-	# ------------------- Library Overrides -----------------------
-	libOverrideTotalFrame,main.dsPLibIDSelection = addLibIDSelectionMenu(main,outputFoldOutFrame1,evalType="dsP")
-	libOverrideTotalFrame.pack(fill="both")
+	# ------------------- Library-Result Selection -----------------------
+	#just load all that have this evaltype
+	#TODO add better selection with LibID-PS-Target
+	#libSelectionFrame = ThemedFrame(outputFoldOutFrame1)
+	#libSelectionFrame.pack(fill="both")
 	
 	# ------------------- length distribution -------------------
-	lcountOptionsOpen=True
-	lcountTotalFrame,lcountOptionsFrame,main.graphicStateIDs["graphLenDistID"] = makeOptionFoldoutFrame(main,outputFoldOutFrame1,"Length distribution",isOpen=lcountOptionsOpen)
+	lcountTotalFrame,lcountOptionsFrame,main.selectedDSPGraphTypes["graphLenDistID"] = makeParameterToggleFrame(main,outputFoldOutFrame1,"Length distribution")
 	lcountTotalFrame.pack(fill="both")
+	
 	ThemedLabel(lcountOptionsFrame,text="Minimum length",anchor="w").grid(column=0,row=0,sticky="w")
 	ThemedEntry(lcountOptionsFrame,textvariable=addGraphicVar(main,"lenDistMinLen",StringVar(),"int",15,
 		"Minimum length needs to be an integer!","Minimum length of reads to display")).grid(column=1,row=0,sticky="e",padx=main.frameBorderSize)
@@ -256,9 +250,7 @@ def add_dsP_eval_GUI(main):
 	lcountOptionsFrame.rowconfigure(3,weight=1,uniform="fred")
 	
 	# ------------------- esiRNA counts -------------------
-	esiCountGraphOptionsOpen=True
-	esiCountGraphTotalFrame,esiCountGraphOptionsFrame,main.graphicStateIDs["esiCountGraphID"] = makeOptionFoldoutFrame(main,
-		outputFoldOutFrame1,"Abundance of esiRNAs",isOpen=esiCountGraphOptionsOpen)
+	esiCountGraphTotalFrame,esiCountGraphOptionsFrame,main.selectedDSPGraphTypes["esiCountGraphID"] = makeParameterToggleFrame(main,outputFoldOutFrame1,"Abundance of esiRNAs")
 	esiCountGraphTotalFrame.pack(fill="both")
 	ThemedLabel(esiCountGraphOptionsFrame,text="X-label extra space",anchor="w").grid(column=0,row=0,sticky="w")
 	ThemedEntry(esiCountGraphOptionsFrame,textvariable=addGraphicVar(main,"esiCountXLabSpace",StringVar(),"int",100,
@@ -282,9 +274,7 @@ def add_dsP_eval_GUI(main):
 	
 	
 	# ------------------- single-length startPos -------------------
-	startPosOptionsOpen=True
-	startPosTotalFrame,startPosOptionsFrame,main.graphicStateIDs["graphStartLengthID"] = makeOptionFoldoutFrame(main,
-		outputFoldOutFrame2,"Read distribution for specific length",isOpen=startPosOptionsOpen)
+	startPosTotalFrame,startPosOptionsFrame,main.selectedDSPGraphTypes["graphStartLengthID"] = makeParameterToggleFrame(main,outputFoldOutFrame2,"Read distribution for specific length")
 	startPosTotalFrame.pack(fill="both")
 	startPosHighlightEsiRNABool = BooleanVar()
 	startPosHighlightEsiRNABool.set(True)
@@ -315,9 +305,7 @@ def add_dsP_eval_GUI(main):
 	
 	
 	# ------------------- single-length Coverage -------------------
-	coverageLenOptionsOpen=True
-	coverageLenTotalFrame,coverageLenOptionsFrame,main.graphicStateIDs["graphCoverageLenID"] = makeOptionFoldoutFrame(main,
-		outputFoldOutFrame2,"Coverage for individual lengths",isOpen=coverageLenOptionsOpen)
+	coverageLenTotalFrame,coverageLenOptionsFrame,main.selectedDSPGraphTypes["graphCoverageLenID"] = makeParameterToggleFrame(main,outputFoldOutFrame2,"Coverage for individual lengths")
 	coverageLenTotalFrame.pack(fill="both")
 	ThemedLabel(coverageLenOptionsFrame,text="Highlight esiRNAs",anchor="w").grid(column=0,row=0,sticky="w")#TODO ?????
 	createTogglebutton(main,coverageLenOptionsFrame,addGraphicVar(main,"lenCovHighlightEsiRNABool",BooleanVar(),"bool",True,
@@ -342,9 +330,8 @@ def add_dsP_eval_GUI(main):
 	coverageLenOptionsFrame.rowconfigure(3,weight=1,uniform="fred")
 	
 	# ------------------- multi-length Coverage -------------------
-	coverageMultiOptionsOpen=True
-	coverageMultiTotalFrame,coverageMultiOptionsFrame,main.graphicStateIDs["graphCoverageMultiID"] = makeOptionFoldoutFrame(main,
-		outputFoldOutFrame2,"Coverage for multiple lengths",isOpen=coverageMultiOptionsOpen)
+	coverageMultiTotalFrame,coverageMultiOptionsFrame,main.selectedDSPGraphTypes["graphCoverageMultiID"] = makeParameterToggleFrame(main,
+		outputFoldOutFrame2,"Coverage for multiple lengths")
 	coverageMultiTotalFrame.pack(fill="both")
 	
 	ThemedLabel(coverageMultiOptionsFrame,text="Select lengths and colour",anchor="w").grid(column=0,row=0,columnspan=2,sticky="w")
@@ -393,8 +380,7 @@ def add_dsP_eval_GUI(main):
 	coverageMultiOptionsFrame.rowconfigure(3,weight=1,uniform="fred")
 	
 	# ------------------- Heatmap -------------------
-	heatmapOptionsOpen=True
-	heatmapTotalFrame,heatmapOptionsFrame,main.graphicStateIDs["graphHeatmapID"] = makeOptionFoldoutFrame(main,outputFoldOutFrame3,"Heatmap",isOpen=heatmapOptionsOpen)
+	heatmapTotalFrame,heatmapOptionsFrame,main.selectedDSPGraphTypes["graphHeatmapID"] = makeParameterToggleFrame(main,outputFoldOutFrame3,"Heatmap")
 	heatmapTotalFrame.pack(fill="both")
 	ThemedLabel(heatmapOptionsFrame,text="Highlight esiRNAs",anchor="w").grid(column=0,row=0,sticky="w")
 	createTogglebutton(main,heatmapOptionsFrame,addGraphicVar(main,"heatmapHighlightEsiRNABool",BooleanVar(),"bool",True,
@@ -434,8 +420,7 @@ def add_dsP_eval_GUI(main):
 	
 	
 	# ------------------- colour Overrides -------------------
-	colourOptionsOpen=True
-	colourTotalFrame,colourOptionsFrame,colourOptionsID = makeOptionFoldoutFrame(main,outputFoldOutFrame3,"Colours",isOpen=colourOptionsOpen)
+	colourTotalFrame,colourOptionsFrame,colourOptionsID = makeParameterToggleFrame(main,outputFoldOutFrame3,"Colours")
 	colourTotalFrame.pack(fill="both")
 	ThemedLabel(colourOptionsFrame,text="esiRNA guide strand colour",anchor="w").grid(column=0,row=0,sticky="w")
 	ThemedEntry(colourOptionsFrame,textvariable=addGraphicVar(main,"esiGSCVar",StringVar(),"colour","#44aaff",
@@ -469,9 +454,7 @@ def add_dsP_eval_GUI(main):
 	hideLLFrame.pack(fill="both")
 	
 	# ------------------ Export overrides ------------------------
-	exportOverrideOpen=True
-	exportOverrideTotalFrame,exportOverrideFrame,main.graphicStateIDs["exportOverrideID"] = makeOptionFoldoutFrame(main,
-		outputFoldOutFrame3,"Export overrides",isOpen=exportOverrideOpen)
+	exportOverrideTotalFrame,exportOverrideFrame,main.selectedDSPGraphTypes["exportOverrideID"] = makeParameterToggleFrame(main,outputFoldOutFrame3,"Export overrides")
 	exportOverrideTotalFrame.pack(fill="both")
 	ThemedLabel(exportOverrideFrame,text="Individual Y-Axis scale",anchor="w").grid(column=0,row=0,columnspan=3,sticky="w")
 	createTogglebutton(main,exportOverrideFrame,addGraphicVar(main,"exportOverrideLocalYScale",BooleanVar(),"bool",True,
@@ -501,9 +484,3 @@ def add_dsP_eval_GUI(main):
 	exportOverrideFrame.rowconfigure(1,weight=1,uniform="fred")
 	exportOverrideFrame.rowconfigure(2,weight=1,uniform="fred")
 	
-	# ------------------- Load Data -------------------
-	ThemedButton(dsPEvalFrame,text="Load data",command=lambda main=main,export = False: loadData(main,export=export)).grid(row=2,column=0,columnspan=3,sticky="news")
-	ThemedButton(dsPEvalFrame,text="Export graphs",command=lambda main=main:exportGraphs(main)).grid(row=3,column=0,columnspan=3,sticky="news")
-	ThemedButton(dsPEvalFrame,text="Reset graphics",command=main.resetGraphicsOutput).grid(row=4,column=0,columnspan=3,sticky="news")
-	# ------------------- Display Data in GUI -------------------
-	#ThemedButton(outputFoldOutFrame,text="Show graphs",command=displayGraphs).pack(fill="both")

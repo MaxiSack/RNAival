@@ -63,18 +63,22 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 	startTime = time.time()						#TODO make an output function/manager(object) that deals with this
 									#also does the update managing and so on for GUI, IF provided with the references
 	
-	print(f"[Command] {libIDs}")
+	#print(f"[Command] {libIDs}")
 	
 	nsucessfullLibs = 0
 	#for each library, test files and execute commands
 	for libID in libIDs:
+		commsQueue.put(("LOG",f"\tProcessing {libID}:"))
 		#check for generated files	[genFiles]	replace $libID with libID
 		genFound=0
 		for genPattern in genFiles.values():
 			genFile = genPattern.replace("$libID",libID)
 			if os.path.isfile(genFile):
-				commsQueue.put(("WARN","\t"+genFile+" already exists"))
+				commsQueue.put(("WARN",f"\t{genFile} already exists"))
 				genFound+=1
+			else:
+				#commsQueue.put(("WARN",f"\tDEBUG {genFile} not found"))
+				pass
 		if force:
 			commsQueue.put(("WARN","\tRunning step by force"))
 		elif genFound==len(genFiles.values()):
@@ -85,7 +89,7 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 			commsQueue.put(("WARN",f"\tFound some output files ({genFound}/{len(genFiles.values())}), recalculating"))
 		
 		
-		if libraries is not None:	# for CAT input
+		if libraries is not None:	# for CAT input	#TODO should be independent!
 			R1repeats,R2repeats = libraries[libID]
 			reqFiles = dict()
 			for i,fp in enumerate(R1repeats):
@@ -114,10 +118,14 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 				commsQueue.put(("ERROR",f"\tERROR {reqFile} not found"))
 			else:
 				reqFound+=1
+				#commsQueue.put(("WARN",f"\tDEBUG {reqFile} found"))
 		if reqFound!=len(reqFiles.values()):
 			commsQueue.put(("ERROR",f"\tCould not find all input files ({reqFound}/{len(reqFiles.values())}), skipping"))
 			continue
-		
+		#if True:
+		#	commsQueue.put(("WARN",f"\tDEBUG returning"))
+		#	nsucessfullLibs+=1
+		#	continue	#TODO debuging
 		if killSignal[0]:break
 		for i,command in enumerate(commands):
 			libCommand = command
@@ -145,9 +153,10 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 			stdoutfile = stdoutfile.replace("$libID",libID)
 			stderrfile = stderrfile.replace("$libID",libID)
 			
-			print(f"Output params: {stdoutfile} {stderrfile} {grep}")
+			#print(f"Output params: {stdoutfile} {stderrfile} {grep}")
 			
-			commsQueue.put(("LOG",f"\n\tRunning command:\n\t{libCommand}\n\nOutput:"))
+			#commsQueue.put(("WARN",f"\t[DEBUG] Running command for {libID}:"))
+			#commsQueue.put(("WARN",f"\t[DEBUG] {libCommand}"))
 			#print(libCommand)
 			try:
 				process=subprocess.Popen(libCommand,shell=True,preexec_fn=os.setsid,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -164,7 +173,7 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 				if killSignal[0]:break
 				
 				if process.returncode == 0:
-					print("\n\nDONE\n\n")
+					#print("\n\nDONE\n\n")
 					out,error = process.communicate()
 					if handleOutput(commsQueue,out.decode(),error.decode(),stdout=stdoutfile,stderr=stderrfile,grep=grep,grepRequireOr=grepRequireOr,force=force):
 						nsucessfullLibs+=1
@@ -184,12 +193,13 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 				print(f"\nError {e.returncode}\n{e.cmd}\n{e.stdout.decode()}\n{e.stderr.decode()}")
 			except:
 				print(f"\n{sys.exc_info()[0]}\n{sys.exc_info()[1]}\n{sys.exc_info()[2]}\n")
-			commsQueue.put(("LOG","done."))
+			#commsQueue.put(("LOG","done."))
 			if killSignal[0]:break
 		if killSignal[0]:break
 	
 	if nsucessfullLibs ==0:
 		commsQueue.put(("pipeERROR","No command finished sucessfully, aborting the pipeline!"))
+		#commsQueue.put(("WARN","[DEBUG] No command finished sucessfully, [not] aborting the pipeline!"))
 
 	
 	print("[Command] Done in "+str(time.time()-startTime)+" seconds")

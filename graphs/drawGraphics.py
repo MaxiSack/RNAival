@@ -393,7 +393,7 @@ def canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y
 	graph.xdataToPix = xdataToPix
 	graph.ydataToPix = ydataToPix
 	
-	print(f"[Draw HEAT] {len(data)} {len(data[0])}")
+	#print(f"[Draw HEAT] {len(data)} {len(data[0])}")
 	
 	canvas.infer_styles(colourscale)
 	
@@ -432,7 +432,7 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 	
 	if graphType is None:graphType = graph.graphType
 	
-	print(f"[Draw] Drawing {graphType}")
+	#print(f"[Draw] Drawing {graphType}")
 	
 	if width is None:width = graph.width	#space allowed on canvas from offset
 	if height is None:height = graph.height

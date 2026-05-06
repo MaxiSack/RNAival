@@ -1,4 +1,7 @@
-
+import json
+import os
+import os.path
+from pathlib import Path
 from tkinter import StringVar
 
 trueList = ["true","t","yes","y",1,"1"]	#lowercase inputs accepted for True
@@ -12,8 +15,111 @@ hexset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r
 class ParameterManager():
 	def __init__(self,main):
 		self.main = main
-		self.parameterDict = dict()
+		self.parameterDict = dict()	#used for parameters added by the GUI
 		self.parametertags = dict()
+		self.parameterSetDict = dict()
+		
+	def getPSName(self):
+		initialID = len(self.parameterSetDict)
+		while f"PS-{initialID}" in self.parameterSetDict:
+			initialID+=1
+		return f"PS-{initialID}"
+	def addParameterSet(self,tags,moduleID,setname=None,virtual=False):
+		if not self.validateTags(tags):
+			self.main.writeError("Error, cannot create Parameter set, fix errors with with parameters!")
+			return False
+		if not setname is None:
+			if setname in self.parameterSetDict:
+				if self.doesPSExist(parameterSet):
+					return True
+				else:
+					self.main.writeError("Error, selected name \"{setname}\" for parameter set already exists.")
+					return False
+			psname = setname
+		else:
+			psname = self.getPSName()
+			self.main.writeLog(f"No name for parameter set provided, using \"{psname}\".")
+		parameterSet = self.getDict(tags=tags)
+		parameterSet[".moduleID"] = moduleID	#this can then directly be passed to sRP or other modules
+		parameterSet[".type"] = "PS"
+		parameterSet[".name"] = psname
+		exists,existName = self.doesPSExist(parameterSet)
+		if exists:
+			if not setname is None:	#if the user specified a different name for the same set of parameters
+				self.main.writeError(f"Error, parameter set \"{setname}\" already exists under name \"{existName}\", please select that parameter set.")
+			print(f"[PM] PS \"{psname}\" already exists under name \"{existName}\", skipping.")
+			self.main.writeLog(f"Parameter set \"{psname}\" already exists under name \"{existName}\", using that instead.")
+			return existName
+		
+		if not virtual:	#Virtual Parametersets exist only in memory, not in filesystem
+			if not self.saveParameterSetDict(psname,parameterSet):return False
+		self.parameterSetDict[psname] = parameterSet
+		return psname
+	def saveParameterSet(self,psname,existsOkay=False):
+		if not psname in self.parameterSetDict:
+			print(f"[PM] Error, {psname} does not exist")
+			return False
+		parameterSet = self.parameterSetDict[psname]
+		self.saveParameterSetDict(psname,parameterSet,existsOkay=existsOkay)
+	def saveParameterSetDict(self,psname,parameterSet,existsOkay=False):
+		#print("\n".join([f"\t{key}:\t{value}" for key,value in parameterSet.items()]))
+		if not self.hasKey("projectPath"):
+			print("[PM] Error, PM has no projectpath, leaving parameter set virtual")
+			return True	#if no PP set, just make virtual
+		#parameterSets are immutable and cant be changed later
+		psPath = os.path.join(self.get("projectPath"),f"Parameters/{psname}.ps.json")
+		if os.path.isfile(psPath):
+			if existsOkay:
+				return True
+			else:
+				self.main.writeError(f"Error, parameter set \"{psname}\" already exists at {psPath}.")
+				return False
+		try:
+			Path(os.path.join(self.get("projectPath"),"Parameters")).mkdir(parents=True, exist_ok=True)
+			with open(psPath,"w") as jw:
+				json.dump(parameterSet,jw,indent="\t",sort_keys=True)
+		except Exception as e:
+			self.main.writeError(f"Error writing parameter set \"{psname}\" as {psPath}.")
+			self.main.writeError(str(e))
+			return False
+		return True
+	def loadParameterSets(self):
+		self.parameterSetDict = dict()
+		psDir = os.path.join(self.get("projectPath"),"Parameters")
+		files = os.listdir(psDir)
+		for psfile in files:
+			if not psfile.endswith(".ps.json"): continue
+			psfile = os.path.join(psDir,psfile)
+			print(f"[PM] loading PS {psfile}")
+			try:
+				with open(psfile,"r") as jr:
+					jsonstr = jr.read()
+					parameterSet = json.loads(jsonstr)
+					if not parameterSet[".type"] == "PS":
+						print(f"[PM] Error, PS {psfile} is not tagges as PS")
+						continue
+					name = parameterSet[".name"]
+					self.parameterSetDict[name] = parameterSet
+			except Exception as e:
+				self.main.writeError(f"ERROR! Problem loading Parameter set {psfile}")
+				self.main.writeError(str(e))
+	def loadPSIntoMain(self,psname):
+		for key,value in self.parameterSetDict[psname].items():
+			if self.hasKey(key):
+				self.set(key,value)
+	def getParameterSet(self,psname):
+		#print(self.parameterSetDict.keys())
+		if not psname in self.parameterSetDict:return None
+		return self.parameterSetDict[psname]
+	def getParameterSetKeys(self):
+		return list(self.parameterSetDict.keys())
+	def doesPSExist(self,newPS):	#check if these parameters already exist in a set!
+		for name,PS in self.parameterSetDict.items():
+			if arePMEqual(PS,newPS):
+				return True,name
+		return False,None #set parameters THEN save. PS cant be changed after creation!
+	def clearPS(self):
+		self.parameterSetDict = dict()
 	
 	def add(self,name,vartype,default,errormessage,desc,tags=None,tag=None):
 		if name in self.parameterDict:return self.parameterDict[name][0]
@@ -83,66 +189,21 @@ class ParameterManager():
 					valueDict[key] = self.get(key)
 		return valueDict
 	
+	def validateTags(self,tags):
+		#print(f"\n\n[PM] Checking parameters for tags {tags}!\n\n")
+		allGood = True
+		for ttag in tags:
+			for key in self.parametertags[ttag]:
+				if not self.validateParameter(key):allGood = False
+		return allGood
+	
 	def validateParameter(self,name):
 		vardesc = self.parameterDict[name]
 		tmp = vardesc[0].get()
 
 		if len(vardesc)>1:
-			error=False
-			if vardesc[1]=="int":
-				try:
-					int(float(tmp))
-				except:
-					error=True
-			elif vardesc[1]=="intList":
-				tmp = str(tmp).removeprefix("(").removesuffix(")")
-				for char in tmp.lower():
-					if not char in intListset:
-						error=True
-						break
-			elif vardesc[1]=="float":
-				try:
-					float(tmp)
-				except:
-					error=True
-			elif vardesc[1]=="bool":
-				if not (tmp.lower() in trueList or tmp.lower() in falseList):
-					error=True
-			elif vardesc[1]=="nuc":
-				for char in tmp.upper():
-					if not char in nucset:
-						error=True
-						break
-			elif vardesc[1]=="id":	#idstring for idstrings that are not allowed to countain weird characters or spaces
-				for char in tmp.lower():
-					if not char in idset:
-						error=True
-						break
-			elif vardesc[1]=="text":
-				pass
-			elif vardesc[1]=="path":
-				pass
-			elif vardesc[1]=="colour":
-				if len(tmp)!=7:
-					error=True	#not correct format
-					self.main.writeError("ERROR, not correct format!")	#TODO maybe use regex istead
-				if not tmp.startswith("#"):
-					error=True	#not correct format
-					self.main.writeError("ERROR, not correct format #!")
-				for char in tmp.lower()[1:]:
-					if not char in hexset:
-						error=True	#other chars in hex-colour
-						self.main.writeError("ERROR, other chars in hex-colour! "+str(char))
-						break
-			elif vardesc[1]=="unknown":
-				print("[PM] Warning, Unknown parameter cannot be validated, "+vardesc[4])
-				self.main.writeWarning("Unknown parameter cannot be validated, "+vardesc[4])
-				pass
-			else:
-				self.main.writeError("ERROR, unidentified parameter description! Please report this!")
-				print("[PM] ERROR, unidentified parameter!")
-				print("[PM] "+str(vardesc))
 			
+			error = self.checkVar(vardesc[1],tmp)
 			#self.main.writeLog(key+": "+str(vardesc[0].get())+", type: "+str(vardesc[1])+", default: "+str(vardesc[2])+"; "+vardesc[4])
 			if error:
 				self.main.writeError(vardesc[3])
@@ -150,7 +211,66 @@ class ParameterManager():
 				return False
 		return True
 	
-	def checkInputParams(self, inputDict=None):
+	def checkVar(self,vartype,value):
+		error=False
+		if vartype=="int":
+			try:
+				int(float(value))
+			except:
+				error=True
+		elif vartype=="intList":
+			value = str(value).removeprefix("(").removesuffix(")")
+			for char in value.lower():
+				if not char in intListset:
+					error=True
+					break
+		elif vartype=="float":
+			try:
+				float(value)
+			except:
+				error=True
+		elif vartype=="bool":
+			if not (value.lower() in trueList or value.lower() in falseList):
+				error=True
+		elif vartype=="nuc":
+			for char in value.upper():
+				if not char in nucset:
+					error=True
+					break
+		elif vartype=="id":	#idstring for idstrings that are not allowed to countain weird characters or spaces
+			for char in value.lower():
+				if not char in idset:
+					error=True
+					self.main.writeError(f"ERROR, character {char} from {value} is not allowed (letters, numbers, \"_\" and \"-\" are allowed)!")
+					break
+		elif vartype=="text":
+			pass
+		elif vartype=="path":
+			pass
+		elif vartype=="colour":
+			if len(value)!=7:
+				error=True	#not correct format
+				self.main.writeError("ERROR, not correct format!")	#TODO maybe use regex istead
+			if not value.startswith("#"):
+				error=True	#not correct format
+				self.main.writeError("ERROR, not correct format #!")
+			for char in value.lower()[1:]:
+				if not char in hexset:
+					error=True	#other chars in hex-colour
+					self.main.writeError("ERROR, other chars in hex-colour! "+str(char))
+					break
+		elif vartype=="unknown":
+			print(f"[PM] Warning, Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")
+			self.main.writeWarning(f"Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")
+			pass
+		else:
+			self.main.writeError("ERROR, unidentified parameter description! Please report this!")
+			print("[PM] ERROR, unidentified parameter!")
+			print("[PM] "+str(vardesc))
+		return error
+	
+	def checkInputParams(self, inputDict=None):	#validate all GUI parameters; unused right now / replaced by main.PM.validateTags()
+		#print("\n\n[PM] Checking parameters!\ndont do this all the time!\nnew PS system should cover most uses!\nmake use to use before creatin PS!\n\n")
 		allGood = True
 		if inputDict is None:
 			inputDict = self.parameterDict
@@ -180,3 +300,11 @@ class ParameterManager():
 			text+=key+":\t"+str(self.get(key))+"\t"+"\t".join([str(v) for v in value[1:]])+"\n"
 		return text
 	
+def arePMEqual(PM1,PM2):
+	if len(PM1)!=len(PM2):return False
+	for (key1,value1),(key2,value2) in zip(sorted(PM1.items()),sorted(PM2.items())):
+		if key1!=key2:return False
+		if key1 == ".name":continue
+		if value1!=value2:return False
+	print(f"[PM] PS \"{PM1[".name"]}\" is equal to PS \"{PM2[".name"]}\"")
+	return True

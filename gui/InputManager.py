@@ -5,33 +5,49 @@ import iostuff.seqFiles as seqIO
 from functions.baseFunctions import getLibName
 
 class Library():
-	def __init__(self,libID,r1,r2=None,ppt="",label="",comment=""):	#TODO ensure r1 countains "R1" and r2 "R2"
+	def __init__(self,libID,r1,r2=[],ppt="",label="",comment=""):
 		self.libID = libID
-		self.r1=r1
-		self.r2=r2
-		self.ppt=ppt	#ppt = pre-processing Type (short-read processing, sRP)
+		self.r1=r1 if isinstance(r1,list) else [r1]
+		self.r2=r2 if isinstance(r2,list) else ([] if r2 is None else [r2])
+		if len(self.r2)==1 and self.r2[0] is None: self.r2 = []
+		#TODO list of preprocessed files (ready for mapping), independent of single-end or paired-end
+		self.ppt=ppt	#ppt = pre-processing Type (Parameter set that cointains this)
 		self.label=label
 		self.comment=comment
 		self.mapTargets = list()
 		self.evalTypes = list()
-		self.isPairedEnd = not r2 is None
-		
+		self.psnames = set()
+		self.countFiles = set()		#(psname,target)	#list of processed counts and where to find them
+	def isPairedEnd(self):
+		return len(self.r2)>0
+	def addPS(self,psname):
+		self.psnames.add(psname)
+	def getPSs(self):
+		return self.psnames
+	def addCountfile(self,bundleID,psname):
+		self.countFiles.add((bundleID,psname))
+	def getCountfiles(self):
+		return self.countFiles
 	def toString(self):
-		return f"{self.libID}:\t{self.r1}\t{self.r2}\t{self.ppt}\t{self.label}\t{self.comment}\t{self.mapTargets}\t{self.evalTypes}"
+		return f"{self.libID}:\t{self.r1}\t{self.r2}\t{self.ppt}\t{self.label}\t{self.comment}\t{self.mapTargets}\t{self.evalTypes}\t{self.psnames}\t{self.countFiles}"
 	def serialize(self):
 		return {"libID":self.libID,"r1":self.r1,"r2":self.r2,"ppt":self.ppt,"label":self.label,"comment":self.comment,
-			"mapTargets":sorted(self.mapTargets),"evalTypes":sorted(self.evalTypes)}
+			"mapTargets":sorted(self.mapTargets),"evalTypes":sorted(self.evalTypes),"psnames":sorted(self.psnames),"countFiles":sorted(self.countFiles)}
 def initLib(contentDict):
 	lib = Library(contentDict["libID"],contentDict["r1"],r2=contentDict["r2"],ppt=contentDict["ppt"],label=contentDict["label"],comment=contentDict["comment"])
 	lib.mapTargets = contentDict["mapTargets"]
 	lib.evalTypes = contentDict["evalTypes"]
+	lib.psnames = set(contentDict["psnames"])
+	lib.countFiles = set()
+	for (bundleID,psname) in contentDict["countFiles"]:
+		lib.countFiles.add((bundleID,psname))
+	#print(lib.toString())
 	return lib
 
 class TargetSequenceBundle():
-	def __init__(self):
-		self.label = "New target"
+	def __init__(self,bundleID):
 		self.comment = ""
-		self.bundleID = "new"	#Maybe just a number ?
+		self.bundleID = bundleID	#bundleID is set manually (but checked for ID-conformity)
 		self.mainTarget = ""	#Path to main mapping target
 		self.mainTargetFasta = ""
 		self.offTargets = list()	#list of paths of genomes
@@ -43,7 +59,7 @@ class TargetSequenceBundle():
 		self.mainSequence = None
 	def loadAnnotation(self,main=None):	#load annotation from mainTarget
 		if not self.mainTarget.endswith(".embl"):return
-		print(f"Loading {self.mainTarget}")
+		print(f"[IM TB] Loading {self.mainTarget}")
 		self.mainSeqID,self.mainSequence,self.annotation = seqIO.loadEMBL(self.mainTarget,main=main)
 	def loadMainTarget(self,main=None):
 		if self.mainTarget.endswith(".embl"):
@@ -60,18 +76,16 @@ class TargetSequenceBundle():
 			with open(self.mainTargetFasta,"w") as fastawriter:
 				fastawriter.write(">"+self.mainSeqID+"\n"+self.mainSequence)
 	def toString(self):
-		return f"{self.label}:\t{self.bundleID}\t{self.mainTarget}\t{self.offTargets}"
+		return f"{self.bundleID}:\t{self.mainTarget}\t{self.offTargets}"
 	def serialize(self):
-		return {"label":self.label,"bundleID":self.bundleID,"mainTarget":self.mainTarget,"offTargets":sorted(self.offTargets),"fastaList":sorted(self.fastaList)}
-def initTargetBundle(contentDict,main=None):
-	t = TargetSequenceBundle()
-	#if contentDict is list then parse that...	#TODO (Where) does this still happen?
-	#"CMV_RNA2","CMV_RNA2.fa","CMV_RNA2.fa","CMV_RNA2.fasta","CMV_RNA2_label","Sequence of CMV RNA2"
-	t.label = contentDict["label"]
-	t.bundleID = contentDict["bundleID"]
-	t.mainTarget = contentDict["mainTarget"]
-	t.offTargets = contentDict["offTargets"]
-	t.fastaList = contentDict["fastaList"]
+		return {"comment":self.comment,"mainTarget":self.mainTarget,"offTargets":sorted(self.offTargets),"fastaList":sorted(self.fastaList)}
+def initTargetBundle(bundleID,contentDict,main=None):	#TODO check and make sure that everything is there! Or return an errormessage
+	t = TargetSequenceBundle(bundleID)	#bundleIDs are not checked for collisions when loading settings, as settings are assumed to be correct
+	if "comment" in contentDict:t.comment = contentDict["comment"]
+	if "mainTarget" in contentDict:t.mainTarget = contentDict["mainTarget"]
+	if "offTargets" in contentDict:t.offTargets = contentDict["offTargets"]
+	if "fastaList" in contentDict:t.fastaList = contentDict["fastaList"]
+	if "label" in contentDict:t.bundleID = contentDict["label"]
 	t.loadMainTarget(main=main)
 	return t
 
@@ -81,7 +95,7 @@ class InputManager():
 		self.targetDict = dict()
 		self.siiPairs = list()
 	
-	def addLib(self,path,path_r2=None,ppt="",label="",comment=""):	#TODO this doesnt account for _001 and _002, as only one path is stored each.... #TODO make lists instead...
+	def addLib(self,path,path_r2=None,ppt="",label="",comment=""):
 		#seqID = os.path.basename(path).removesuffix(".fasta.gz").removesuffix(".fasta").removesuffix(".fa")
 		libID = getLibName(path)
 		if label == "":label=libID
@@ -94,11 +108,15 @@ class InputManager():
 			self.libDict[libID].comment=comment
 		else:
 			self.libDict[libID] = Library(libID,path,r2=path_r2,ppt=ppt,label=label,comment=comment)
-		print(f"Added lib {self.libDict[libID].toString()}")
-	def updateLib(self,libID,ppt=None,label=None,comment=None,mapTarget=None,evalType=None):
-		if not ppt is None:self.libDict[libID].ppt=ppt
+		print(f"[IM] Added lib {self.libDict[libID].toString()}")
+	def updateLib(self,libID,ppt=None,label=None,comment=None,psname=None,mapTarget=None,evalType=None):
+		if not libID in self.libDict: return False
+		#if not ppt is None:self.libDict[libID].ppt=ppt
 		if not label is None:self.libDict[libID].label=label
 		if not comment is None:self.libDict[libID].comment=comment
+		if not psname is None:
+			self.libDict[libID].addPS(psname)
+			self.libDict[libID].ppt=psname
 		if not mapTarget is None:self.addMapTarget(libID,mapTarget)
 		if not evalType is None:self.addEvalType(libID,evalType)
 		
@@ -108,13 +126,17 @@ class InputManager():
 		return self.libDict
 	def getLibIDs(self):
 		return [lib.libID for lib in list(self.libDict.values())]
-	def addSeqFiles(self,inputFileList):
+	def addSeqFiles(self,inputFileList):	#TODO improve this as stated
 		sortedFiles = sorted(inputFileList)
 		i=0
 		while i<len(sortedFiles):
-			print(f"{i} {sortedFiles[i]}")
+			#print(f"[IM] {i} {sortedFiles[i]}")
+			#this doesnt account for _001 and _002, as only one path is stored each.... 
+			# make lists instead...
+			
+			#make system to find all libIDs and then group by that instead of going through a sorted list!
 			if i<len(sortedFiles)-1 and getLibName(sortedFiles[i]) == getLibName(sortedFiles[i+1]):
-				self.addLib(sortedFiles[i],path_r2=sortedFiles[i+1])
+				self.addLib(sortedFiles[i],path_r2=sortedFiles[i+1])	# ensure r1 countains "R1" and r2 "R2"
 				i+=2
 			else:
 				self.addLib(sortedFiles[i])
@@ -125,20 +147,13 @@ class InputManager():
 		else:
 			print(f"ERROR, wrong key used for removal: {libID} !")
 	
-	def addTargetBundle(self,main,mainpath,label,comment,offTargets=list()):
-		bundleID = os.path.basename(mainpath).removesuffix(".fasta").removesuffix(".fa").removesuffix(".embl")
-		for ot in sorted([os.path.basename(target) for target in offTargets]):
-			bundleID+="_"+str(ot.removesuffix(".gz").removesuffix(".fasta").removesuffix(".fa").removesuffix(".fna").removesuffix(".embl"))
-		if bundleID in self.targetDict:
-			print(f"ERROR! bundleID {bundlID} already exists!:{self.targetDict[bundleID].toString()} Overwriting old bundles is not allowed!")
+	def addTargetBundle(self,main,bundleID,mainTarget,comment,offTargets=list()):
+		if bundleID in self.targetDict:	#This shouldnt happen in the current implementation, but keeping it just in case
 			main.writeError(f"ERROR! bundleID {bundlID} already exists!:{self.targetDict[bundleID].toString()} Overwriting old bundles is not allowed!")
 			return False
-		
-		self.targetDict[bundleID] = TargetSequenceBundle()
-		self.targetDict[bundleID].bundleID = bundleID
-		self.targetDict[bundleID].label = label
+		self.targetDict[bundleID] = TargetSequenceBundle(bundleID)
 		self.targetDict[bundleID].comment = comment
-		self.targetDict[bundleID].mainTarget = mainpath
+		self.targetDict[bundleID].mainTarget = mainTarget
 		self.targetDict[bundleID].offTargets = offTargets
 		
 		#convert maintarget to fasta if emble
@@ -148,10 +163,10 @@ class InputManager():
 		fastaList = [self.targetDict[bundleID].mainTargetFasta]
 		fastaList.extend(offTargets)
 		self.targetDict[bundleID].fastaList = fastaList
-		
-		
-	def getTarget(self,targetID):
+	def getTarget(self,targetID):	#This should never be able to throw an error, because targetID is always selected from the list of keys
 		return self.targetDict[targetID]
+	def hasTarget(self,targetID):
+		return targetID in self.targetDict
 	def getTargets(self):
 		return self.targetDict.values()
 	def getTargetIDs(self):
@@ -160,7 +175,6 @@ class InputManager():
 	def addMapTarget(self,libID,targetID):	#TargetID can also be a tuple (mainTarget, genome1,genome2,...)
 		if targetID not in self.libDict[libID].mapTargets:
 			self.libDict[libID].mapTargets.insert(0,targetID)
-			#self.libDict[libID].mapTargets = [targetID]	#for now its just one!
 	def getMapTargets(self,libID):
 		return sorted(self.libDict[libID].mapTargets)
 	def removeMapTarget(self,libID,targetID):
@@ -211,9 +225,9 @@ class InputManager():
 	def serialize(self):
 		return ["Libraries:",self.serializeLibs(),"Targets:",self.serializeTargets(),"siIPairs:",self.siiPairs]
 	def setAll(self,varList,main=None):
-		_,libDict,_,targetDict,_,self.siiPairs = varList	#TODO assert / ensure _ = key (see above)	#or use a dict...
+		_,libDict,_,targetDict,_,self.siiPairs = varList	#TODO assert / ensure _ = key (see above)	# or use a dicttionary!
 		for key,value in libDict.items():
 			self.libDict[key] = initLib(value)
 		for key,value in targetDict.items():
-			self.targetDict[key] = initTargetBundle(value,main=main)
+			self.targetDict[key] = initTargetBundle(key,value,main=main)
 		

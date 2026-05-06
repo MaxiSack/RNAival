@@ -1,40 +1,45 @@
 
 import os.path
+from pathlib import Path
 
 from graphs.Combograph import Combograph
 from iostuff.readCountDB import ReadCountsDatabase
 
-def showGraphs(basegui,resultDir,fontMultiplier=1.0):
-	if basegui.comboGraphs is None:
-		basegui.writeError("\tERROR Data not loaded!")
+def showGraphs(main,fontMultiplier=1.0):
+	if main.comboGraphs is None:
+		main.writeError("\tERROR Data not loaded!")
 		print("[LoadGraphs] ERROR Data not loaded!")
 		return False
-	#print("[LoadGraphs][Debug] "+str(basegui.comboGraphs.items()))
-	for graph in basegui.comboGraphs.values():
+	#print("[LoadGraphs][Debug] "+str(main.comboGraphs.items()))
+	for graph in main.comboGraphs.values():
 		#print("[Debug] displaying "+str(graph.title))
-		graph.generateIGs(basegui,resultDir)
+		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
+		Path(resultDir).mkdir(parents=True, exist_ok=True)
+		graph.generateIGs(main,resultDir)
 		graph.drawOntoGui(fontMultiplier=fontMultiplier)
 	return True
 
-def exportGraphs(basegui,resultsPath,exportW,exportH,fontMultiplier=1.0):
-	if basegui.comboGraphs is None:
-		basegui.writeError("\tERROR Data not loaded!")
+def exportGraphs(main,exportW,exportH,fontMultiplier=1.0):
+	if main.comboGraphs is None:
+		main.writeError("\tERROR Data not loaded!")
 		print("[LoadGraphs] ERROR Data not loaded!")
 		return False
-	for graph in basegui.comboGraphs.values():
-		graph.exportAsSVG(resultsPath,exportW,exportH,fontMultiplier)
+	for graph in main.comboGraphs.values():
+		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
+		Path(resultDir).mkdir(parents=True, exist_ok=True)
+		graph.exportAsSVG(resultDir,exportW,exportH,fontMultiplier)
 	return True
 
-def setStyles(basegui,highlightStyles):
-	if basegui.comboGraphs is None:
-		basegui.writeError("\tERROR Data not loaded!")
+def setStyles(main,highlightStyles):
+	if main.comboGraphs is None:
+		main.writeError("\tERROR Data not loaded!")
 		print("[LoadGraphs] ERROR Data not loaded!")
 		return False
-	for graph in basegui.comboGraphs.values():
+	for graph in main.comboGraphs.values():
 		graph.setStyles(highlightStyles)
 	return True
 
-def addGraph_LenDist(basegui,graphDef,libIDs,db,highlightStyles=None):
+def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	doPercent=graphDef["percent"]
 	graphtype="lengths"+("_percent" if doPercent else "")
 	graphList = list()
@@ -49,7 +54,7 @@ def addGraph_LenDist(basegui,graphDef,libIDs,db,highlightStyles=None):
 	#print(graphDef)
 	for libID in libIDs:
 		countList = list()
-		print((maxL+1-minL))
+		#print((maxL+1-minL))
 		totalReads=0
 		for length in range(minL,maxL+1):
 			senseSum = db.getLengthCount(libID,0,length)
@@ -69,9 +74,11 @@ def addGraph_LenDist(basegui,graphDef,libIDs,db,highlightStyles=None):
 	cols = graphDef["cols"]
 	legend=("Strand:",[(cols[i],label) for i,label in enumerate(legendLabels)])
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.addData(graphList)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
 def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even?
 	highlighting = [dict(),dict()]	#dict of position -> style; for both strands
@@ -99,7 +106,7 @@ def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even?
 	#print(highlighting)
 	return highlighting,xLabels
 
-def addGraph_esiCounts(basegui,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
+def addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
 	doPercent=graphDef["percent"]
 	
 	highlighting,xLabels = readAnnotation(annotation)
@@ -136,14 +143,16 @@ def addGraph_esiCounts(basegui,graphDef,libIDs,db,siRNAPos,annotation=None,highl
 	legend=("esiRNA:",[(col,legendLabels[i]) for i,col in enumerate(cols)])
 	#print("")
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	if len(graphList)>0:graph.addData(graphList)
 	#print("\nXlabels:")
 	#print(xLabels)
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
 	graph.setXLabels(xLabels,graphDef["xlabSpace"])
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def addGraph_singleLengthCounts(basegui,graphDef,libIDs,db,annotation=None,highlightStyles=None):
+def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highlightStyles=None):
 	doPercent=graphDef["percent"]#False
 	targetLen=graphDef["targetlen"]
 	graphtype="Counts_l"+str(targetLen)+("_percent" if doPercent else "")
@@ -187,11 +196,13 @@ def addGraph_singleLengthCounts(basegui,graphDef,libIDs,db,annotation=None,highl
 	else:
 		legend=None
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.addData(graphList)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def addGraph_singleLengthCoverage(basegui,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
+def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
 	targetLen=graphDef["targetlen"]
 	graphtype="Coverage_l"+str(targetLen)
 	
@@ -254,16 +265,15 @@ def addGraph_singleLengthCoverage(basegui,graphDef,libIDs,db,siRNAPos,annotation
 	else:
 		legend=("Coverage:",[("black",str(targetLen)+"nt reads")])
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.addData(graphList)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def addGraph_multiLengthCoverage(basegui,graphDef,libIDs,db):
+def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 	targetLengths=[int(p[0]) for p in graphDef["targets"]]
 	graphtype="MultiCoverage_"+"".join(["l"+str(l) for l in targetLengths])
-	
-	#print(graphtype)
-	#print(siRNAPos)
 	graphList = list()
 	for libID in libIDs:
 		coverage = [[0]*(len(targetLengths)*2+1) for i in range(1,db.seqLen+1)]	#per position
@@ -284,12 +294,14 @@ def addGraph_multiLengthCoverage(basegui,graphDef,libIDs,db):
 	
 	lineColours = [graphDef["targets"][int(i/2)][1] for i in range(len(targetLengths)*2)]
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="multiLine",legend=legend,xlab=graphDef["xlab"],ylab=graphDef["ylab"],lineColours=lineColours)
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="multiLine",legend=legend,xlab=graphDef["xlab"],ylab=graphDef["ylab"],lineColours=lineColours)
 	graph.addData(graphList)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 	#print("")
 
-def addGraph_coverage(basegui,graphDef,libIDs,db):	#Unused
+def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 	graphtype="Coverage_all"
 	graphList = list()
 	for libID in libIDs:
@@ -305,11 +317,13 @@ def addGraph_coverage(basegui,graphDef,libIDs,db):	#Unused
 				
 		graphList.append((libID,coverage))
 		#print(coverage)
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="BAR2",xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.addData(graphList)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def addGraph_heatmap(basegui,graphDef,libIDs,db,annotation=None,highlightStyles=None):
+def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=None):
 	graphtype = "Heatmap"
 	graphList = list()
 	highlightEsis=graphDef["highlightEsis"]
@@ -352,12 +366,14 @@ def addGraph_heatmap(basegui,graphDef,libIDs,db,annotation=None,highlightStyles=
 	colourscale_define = [(("abs",0),(0,0,0)), (("abs",1),(0,0,100)), (("rel","percentile",midpointPercentile),(0,255,255)), (("rel","max"),(255,0,0))]
 	
 	if "hideLegend" in graphDef:legend=None
-	graph = Combograph(basegui,graphtype+" - "+graphDef["bundleID"],graphDef["mainTargetSeqID"],graphType="HEAT",legend=legend,
+	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="HEAT",legend=legend,
 		positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
+	graph.bundleID=graphDef["bundleID"]
+	graph.psname=graphDef["psname"]
 	graph.addData(graphList,colourscale=colourscale_define,globalYScale=True)
-	basegui.comboGraphs[graphtype+graphDef["bundleID"]] = graph
+	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def loadCounts(basegui,countFile,libIDs,seqLen):
+def loadCounts(main,countFile,libIDs,seqLen):
 	#check for input files	[reqFiles]
 	reqNeeded=0
 	reqFound=0
@@ -365,41 +381,41 @@ def loadCounts(basegui,countFile,libIDs,seqLen):
 		reqNeeded+=1
 		reqFile = countFile.replace("$libID",libID)
 		if not os.path.isfile(reqFile):
-			basegui.writeError("\tERROR "+reqFile+" not found")
+			main.writeError("\tERROR "+reqFile+" not found")
 		else:
 			reqFound+=1
-			#basegui.writeLog("\t"+reqFile+" was found")
+			#main.writeLog("\t"+reqFile+" was found")
 	if reqFound!=reqNeeded:
-		basegui.writeError("\tCould not find all input files ("+str(reqFound)+"/"+str(reqNeeded)+"), skipping")
+		main.writeError("\tCould not find all input files ("+str(reqFound)+"/"+str(reqNeeded)+"), skipping")
 		return False
 	
-	print("[LoadGraphs] Loading counts")
+	#print("[LoadGraphs] Loading counts")
 	db = ReadCountsDatabase(libIDs,seqLen)
 	for libID in libIDs:
 		if not db.loadFile(libID,countFile.replace("$libID",libID)):
-			basegui.writeError("Count table "+str(countFile.replace("$libID",libID))+" has too many errors, aborting!")
+			main.writeError("Count table "+str(countFile.replace("$libID",libID))+" has too many errors, aborting!")
 			return None
 	#db.printStats()
 	return db
 
-def loadGraphs(basegui,db,libIDs,wantedgraphs,siRNAPos,annotation=None,highlightStyles=None):
+def loadGraphs(main,db,libIDs,wantedgraphs,siRNAPos,annotation=None,highlightStyles=None):
 	
 	print("[LoadGraphs] Defining/generating graphics")
-	#basegui.comboGraphs = dict()
+	#main.comboGraphs = dict()
 	for graphDef in wantedgraphs:	#create grpahs based on the data
 		if graphDef[0]=="lendist":
-			addGraph_LenDist(basegui,graphDef,libIDs,db,highlightStyles=highlightStyles)
+			addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=highlightStyles)
 		elif graphDef[0]=="esiCounts":
-			addGraph_esiCounts(basegui,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
+			addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="countsSingle":
-			addGraph_singleLengthCounts(basegui,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
+			addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="coverageSingleEsi":
-			addGraph_singleLengthCoverage(basegui,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
+			addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="coverageMulti":
-			addGraph_multiLengthCoverage(basegui,graphDef,libIDs,db)
+			addGraph_multiLengthCoverage(main,graphDef,libIDs,db)
 		elif graphDef[0]=="heapmapEsi":
-			addGraph_heatmap(basegui,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
+			addGraph_heatmap(main,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="coverageAll":
-			addGraph_coverage(basegui,graphDef,libIDs,db)
+			addGraph_coverage(main,graphDef,libIDs,db)
 	
-	basegui.writeLog("done.\n")
+	main.writeLog("done.\n")
