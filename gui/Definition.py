@@ -61,7 +61,7 @@ def defineGUI(main):
 	# -------------------- loading modules and applying their GUI --------------- 
 	main.moduleDict = loadModules(main)
 	for key,value in main.moduleDict.items():
-		print(f"\nAdding GUI of module {key}!\n")
+		#print(f"\nAdding GUI of module {key}!\n")
 		value.add_GUI(main)
 	
 	# -------------------- GUI for evaluation types --------------- 

@@ -154,6 +154,7 @@ def saveSettings(main):
 	
 	#updateSeqFiles(main)
 	saveSeqFiles(main)
+	sig.updateSIILibPairs(main)
 	#print(main.PM.toString())
 	#print(main.IM.toString())
 	saveConstruct = ["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
@@ -258,7 +259,7 @@ def createTogglebutton(main,parent,boolVar,syncKey=None):
 	main.toggleButtonReferenceDict[ID][0].append(tb)
 	if boolVar.get():
 		tb["image"]=main.xBoxImage
-	print(f"[main func] TB:  {ID} {boolVar.get()}")
+	#print(f"[main func] TB:  {ID} {boolVar.get()}")
 	#print(f"[main func] Set: {ID} {main.toggleButtonReferenceDict[ID][1]}")
 	return tb
 

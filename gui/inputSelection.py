@@ -45,8 +45,7 @@ def addSeqFiles(main,inputFileList):
 	if inputFileList is None or len(inputFileList)==0:return
 	print(f"Adding seqfiles {inputFileList}")
 	main.IM.addSeqFiles(inputFileList)
-	updateSeqFiles(main)
-	updateSeqFileList(main)
+	saveSeqFiles(main)
 
 def updateSeqFiles(main):	#Update the internally stored libaries with the selected values
 	print("[input] Saving changes to seqFileList")
@@ -84,11 +83,11 @@ def updateSeqFileList(main):
 	for column,colDesc in enumerate(desc):
 		ThemedLabel(main.seqFileListFrame,text=colDesc,anchor="w").grid(column=column,row=row,sticky="ew")
 	fieldKeys=["label","comment","PS","mapTargets","evalTypes"]
-	print(f"[Input] PS-keys: {main.PM.getParameterSetKeys()}")
+	#print(f"[Input] PS-keys: {main.PM.getParameterSetKeys()}")
 	targetLabels = [main.IM.getTarget(bundleID).bundleID for bundleID in main.mapTargets]
 	PSkeys = main.PM.getParameterSetKeys()
 	psCount = len(PSkeys)
-	print(f"[Input] Target-labels: {targetLabels}")
+	#print(f"[Input] Target-labels: {targetLabels}")
 	#print(f"[input][Debug] updateSeqFileList init took {time.time()-starttime} seconds\n")
 	lasttime = time.time()
 	for libKey,library in sorted(main.IM.getLibraries().items(),key=lambda x:x[0]):
@@ -111,7 +110,7 @@ def updateSeqFileList(main):
 				if psCount < 1:	#shouldnt happen, since sRP has a default PS
 					print("\n\n[Input selection] ERROR, no parametersets to select!\n\n")
 					continue
-				print(f"PPT in lib {libKey}: {libVals["ppt"]}")
+				#print(f"PPT in lib {libKey}: {libVals["ppt"]}")
 				psVar = StringVar(value=PSkeys[0] if libVals["ppt"]=="" else libVals["ppt"])	#new libraries have their ppt="" until something is selected and saved
 				main.seqFileDict[libKey][fkey] = psVar
 				if psCount==1:
@@ -176,7 +175,6 @@ def addBackgroundTargets(main,menu):
 	targetFileList = askopenfilenames(filetypes=[("Fasta",".fasta .fa .fna .fna.gz"),("EMBL",".embl")],title="Select background sequences",initialdir=main.execPath)
 	#returns None or () if canceled
 	if targetFileList is None or len(targetFileList)==0:return	#canceled selection or nothing selected
-	#addSeqFiles(main,inputFileList)
 	menu.offTargets = targetFileList	#TODO this replaces previously selected targets - should implement a better (more GUI complex) way to do this
 	print(f"Selected {menu.offTargets}")
 	menu.offTargetTextfield["text"]="\n".join([os.path.basename(path) for path in menu.offTargets])
@@ -214,9 +212,6 @@ def addNewTargetBundleFromMenu(main,menu):
 	#maybe store targets and libraries as separate files in folders !?!
 
 def addTargetBundleMenu(main):
-	
-	#remove newButton or not?
-	
 	menu = TargetBundleMenu(main.inputFrame_targetFilesList,main)
 	addBundleMenuOuter = ThemedFrame(main.inputFrame_targetFilesList,style="gBorder.TFrame")
 	addBundleMenuOuter.pack(fill="x",expand=True,anchor="nw",padx=5,pady=5)
@@ -237,7 +232,7 @@ def addTargetBundleMenu(main):
 		).grid(row=2,column=2,columnspan=2,sticky="ew")
 	
 	ThemedLabel(addBundleMenu,text="Main target:",anchor="w").grid(row=3,column=0,columnspan=1,sticky="news")#mainID
-	ThemedLabel(addBundleMenu,textvariable=menu.mainIDVar,anchor="w").grid(row=3,column=1,columnspan=1,sticky="news")	#TODO read-only entry instead of label?
+	ThemedLabel(addBundleMenu,textvariable=menu.mainIDVar,anchor="w").grid(row=3,column=1,columnspan=1,sticky="news")
 	ThemedLabel(addBundleMenu,text="Main length:",anchor="w").grid(row=4,column=0,columnspan=1,sticky="news")#mainLength
 	ThemedLabel(addBundleMenu,textvariable=menu.mainLengthVar,anchor="w").grid(row=4,column=1,columnspan=1,sticky="news")
 	#add Annotation dropdown if available
@@ -294,7 +289,6 @@ def addTargetBundleFoldout(main,targetBundle):
 	
 	bundleDescriptionFrame = ThemedFrame(bundleDescriptionFrameOuter,style="TFrame")
 	bundleDescriptionFrame.pack(fill="x",expand=True,anchor="nw",padx=5,pady=5)
-	#getStyledText(main,main.mainNotebook)	#contents should be selectable for copy
 	ThemedLabel(bundleDescriptionFrame,text=targetBundle.bundleID,anchor="w",style="Medium.TLabel").grid(row=0,column=0,columnspan=4,sticky="new")
 	ThemedLabel(bundleDescriptionFrame,text=targetBundle.comment,anchor="w").grid(row=1,column=0,columnspan=4,sticky="new")
 	ThemedLabel(bundleDescriptionFrame,text="Main target:",anchor="w").grid(row=2,column=0,columnspan=1,sticky="new")
@@ -337,14 +331,10 @@ def updateTargetListFrame(main):
 	print("[input] Updating target list frame")
 	for child in main.inputFrame_targetFilesList.winfo_children():child.destroy()
 	
-	#print(main.IM.toString())
-	
 	for targetBundle in main.IM.getTargets():
-		#print(targetBundle)
-		#print(targetBundle.toString())
-		addTargetBundleFoldout(main,targetBundle)#
+		addTargetBundleFoldout(main,targetBundle)
 	
-	main.mapTargets = list()	#["-"]
+	main.mapTargets = list()
 	main.mapTargets.extend(main.IM.getTargetIDs())
 	updateSeqFileList(main)
 
@@ -360,7 +350,6 @@ def add_inputGUI(main):
 	inputFrame_main = ThemedFrame(main.inputFrame,style="gBorder.TFrame")
 	inputFrame_main.pack(fill="both",expand=True,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
-	
 	# --------------------- read libraries ----------------
 	inputFrame_seqFiles = ThemedFrame(inputFrame_main,style="TFrame")
 	inputFrame_seqFiles.grid(row=0,column=0,sticky="news",padx=main.frameBorderSize,pady=main.frameBorderSize)
@@ -368,8 +357,6 @@ def add_inputGUI(main):
 	
 	ThemedButton(inputFrame_seqFiles,text="Select directory",command=lambda main=main:findFilesInDir(main)).grid(column=0,row=1,sticky="news")
 	ThemedButton(inputFrame_seqFiles,text="Select files",command=lambda main=main:findFilesSelect(main)).grid(column=1,row=1,sticky="news")
-	
-	
 	
 	main.seqFileDict = dict()	#TODO this needs a scrollbar!; more accurately: place this on a canvas which is next to a scrollbar on a frame
 	main.seqFileListFrame = ThemedFrame(inputFrame_seqFiles,style="TFrame")
@@ -381,8 +368,7 @@ def add_inputGUI(main):
 	main.seqFileListFrame.columnconfigure(3,weight=0)
 	main.seqFileListFrame.columnconfigure(4,weight=0)
 	main.seqFileListFrame.columnconfigure(5,weight=0)
-		
-	updateSeqFileList(main)
+	
 	ThemedButton(inputFrame_seqFiles,text="Save Changes",command=lambda main=main:saveSeqFiles(main)).grid(column=0,row=3,columnspan=2,sticky="news")
 	
 	inputFrame_seqFiles.columnconfigure(0,weight=1,uniform="fred")
@@ -397,7 +383,6 @@ def add_inputGUI(main):
 	inputFrame_targetFiles = ThemedFrame(inputFrame_main,style="TFrame")
 	inputFrame_targetFiles.grid(row=0,column=1,sticky="news",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
-	
 	ThemedLabel(inputFrame_targetFiles,text="Select targets for mapping",anchor="w",style="Medium.TLabel").grid(row=0,column=0,sticky="news",padx=main.frameBorderSize)
 	ThemedButton(inputFrame_targetFiles,text="Add new target",command = lambda main=main:addTargetBundleMenu(main)).grid(row=1,column=0,sticky="news")
 	main.inputFrame_targetFilesList = ThemedFrame(inputFrame_targetFiles,style="TFrame")	#TODO this also needs a scrollbar!
@@ -407,8 +392,6 @@ def add_inputGUI(main):
 	inputFrame_targetFiles.rowconfigure(1,weight=0,uniform="fred")
 	inputFrame_targetFiles.rowconfigure(2,weight=1)
 	inputFrame_targetFiles.columnconfigure(0,weight=1)
-	
-	updateTargetListFrame(main)
 	
 	# --------------------- main ----------------
 	inputFrame_main.rowconfigure(0,weight=1)

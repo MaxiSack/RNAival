@@ -27,7 +27,7 @@ class Library():
 	def addCountfile(self,bundleID,psname):
 		self.countFiles.add((bundleID,psname))
 	def getCountfiles(self):
-		return self.countFiles
+		return sorted(self.countFiles)
 	def toString(self):
 		return f"{self.libID}:\t{self.r1}\t{self.r2}\t{self.ppt}\t{self.label}\t{self.comment}\t{self.mapTargets}\t{self.evalTypes}\t{self.psnames}\t{self.countFiles}"
 	def serialize(self):
@@ -94,6 +94,7 @@ class InputManager():
 		self.libDict = dict()
 		self.targetDict = dict()
 		self.siiPairs = list()
+		self.availableTPS = dict()
 	
 	def addLib(self,path,path_r2=None,ppt="",label="",comment=""):
 		#seqID = os.path.basename(path).removesuffix(".fasta.gz").removesuffix(".fasta").removesuffix(".fa")
@@ -147,6 +148,22 @@ class InputManager():
 		else:
 			print(f"ERROR, wrong key used for removal: {libID} !")
 	
+	def getTPSList(self):
+		for lib in self.libDict.values():
+			if not "siI" in lib.evalTypes:continue
+			for TPS in lib.getCountfiles():	#[(bundleID,psname)]
+				sTPS = self.TPSToString(TPS)
+				if not sTPS in self.availableTPS:self.availableTPS[sTPS] = [TPS,set()]
+				self.availableTPS[sTPS][1].add(lib.libID)
+		return sorted(self.availableTPS.keys())
+	def getTPSLibIDs(self,selectedTPS):
+		return sorted(self.availableTPS[selectedTPS][1])
+	def getTPSTuple(self,sTPS):
+		return self.availableTPS[sTPS][0]
+	def TPSToString(self,TPS):
+		bundleID,psname = TPS
+		return f"{bundleID} + {psname}"
+	
 	def addTargetBundle(self,main,bundleID,mainTarget,comment,offTargets=list()):
 		if bundleID in self.targetDict:	#This shouldnt happen in the current implementation, but keeping it just in case
 			main.writeError(f"ERROR! bundleID {bundlID} already exists!:{self.targetDict[bundleID].toString()} Overwriting old bundles is not allowed!")
@@ -188,8 +205,9 @@ class InputManager():
 	def removeEvalType(self,libID,evalType):
 		self.libDict[libID].evalTypes.remove(evalType)
 	
-	def addSIIPair(self,libPos,libNeg,label=None):
-		self.siiPairs.append((libPos,libNeg,label))
+	def addSIIPair(self,libPos,libNeg,label,TPS):
+		print(f"Adding siIPair {(libPos,libNeg,label,TPS)}")
+		self.siiPairs.append((libPos,libNeg,label,TPS))
 	def getSIIPairs(self):
 		return self.siiPairs
 	def removeSIIPair(self,index):
@@ -230,4 +248,6 @@ class InputManager():
 			self.libDict[key] = initLib(value)
 		for key,value in targetDict.items():
 			self.targetDict[key] = initTargetBundle(key,value,main=main)
+		self.availableTPS = dict()
+		self.getTPSList()
 		

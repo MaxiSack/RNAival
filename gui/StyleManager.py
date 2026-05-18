@@ -14,6 +14,7 @@ class StyleManager:
 		
 		self.registredStyledTextFields = list()
 		self.registredOptionMenus = list()
+		self.registredOptionMenuButtons = list()
 		
 		self.main.headerfont = "System 24 bold"
 		self.main.notebookTextFont = "System 14 bold"
@@ -133,6 +134,7 @@ class StyleManager:
 			self.mystyle.configure("TLabel",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour)
 			self.mystyle.configure("Header.TLabel",font=self.main.headerfont)
 			self.mystyle.configure("Medium.TLabel",font="System 14 bold")
+			self.mystyle.configure("TEST.TLabel",background="#ff0000")
 			self.mystyle.configure("TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="raised",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
 			self.mystyle.map("TButton",background=[("active",self.buttonHighlightColour)])
 			self.mystyle.configure("Selected.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="sunken",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
@@ -167,11 +169,11 @@ class StyleManager:
 			self.mystyle.configure("TScrollbar",background=self.buttonColour,arrowcolor=self.buttonHighlightColour,troughcolor=self.backgroundColour)#,lightcolor="red",darkcolor="green",relief="raised",borderwidth=10)
 			self.mystyle.map("TScrollbar",background=[("active",self.buttonHighlightColour)])
 			
-			self.mystyle.configure("TNotebook",background=self.backgroundColour)
+			self.mystyle.configure("TNotebook",background=self.backgroundColour)	#Padding here pads the notebook in its parent
 			self.mystyle.configure("TNotebook.Tab",foreground=self.buttonTextColour,background=self.buttonDarkColour,font=self.main.notebookTextFont,
-				padding = (self.main.notebookPadding*2,0,self.main.notebookPadding*2,0))	#padding is w,n,e,s
+				padding = (self.main.notebookPadding*4,0,self.main.notebookPadding*4,0))	#padding here pads the text in tabs	#padding is w,n,e,s
 			self.mystyle.map("TNotebook.Tab",background = [("selected",self.buttonColour)],
-				padding = [("selected",(self.main.notebookPadding*4,self.main.notebookPadding,self.main.notebookPadding*4,self.main.notebookPadding))])#,foreground = [("selected",self.buttonTextColour)])
+				padding = [("selected",(self.main.notebookPadding*6,self.main.notebookPadding*2,self.main.notebookPadding*6,0))])#,foreground = [("selected",self.buttonTextColour)])
 			
 			#file select menue is partially styled ~ bg + fg + fontsize
 			#self.mystyle.configure("Treeview",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour)
@@ -205,6 +207,13 @@ class StyleManager:
 		for optionMenu in self.registredOptionMenus:
 			optionMenu.config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+		
+		#registredOptionMenuButtons
+		for optionMenu in self.registredOptionMenuButtons:
+			optionMenu.config(bg=self.buttonColour,fg=self.buttonTextColour,font=self.main.buttonTextFont,activeforeground=self.textColour,activebackground=self.buttonHighlightColour)
+			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+		
+	
 	def reset(self):
 		self.registredOptionMenus = list()
 	

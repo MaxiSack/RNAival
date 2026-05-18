@@ -374,14 +374,13 @@ def runPipeline(main):
 				
 	usedParameterSets = set()
 	for libID,lib in main.IM.getLibraries().items():
-		#print(f"[sRP] {libID} {lib.psnames}")
-		for psname in lib.psnames:
-			ps = main.PM.getParameterSet(psname)
-			if ps is None:
-				main.writeError(f"Error, could not find parameterset \"{psname}\" for library \"{libID}\"!")
-				continue
-			if ps[".moduleID"] == moduleID:
-				usedParameterSets.add(psname)
+		#print(f"[sRP] {libID} {lib.ppt} {lib.psnames}")
+		ps = main.PM.getParameterSet(lib.ppt)
+		if ps is None:
+			main.writeError(f"Error, could not find parameterset \"{psname}\" for library \"{libID}\"!")
+			continue
+		if ps[".moduleID"] == moduleID:
+			usedParameterSets.add(lib.ppt)
 	
 	main.tmp_run_psList_sRP = sorted(usedParameterSets)
 	print(f"[sRP run] Found PSs: {main.tmp_run_psList_sRP}")
