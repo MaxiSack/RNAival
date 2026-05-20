@@ -28,7 +28,7 @@ import gui.functions as gfs
 import iostuff.seqFiles as seqIO
 
 def findFilesInDir(main):
-	inputFileDir = askdirectory(title="Select directory",initialdir=main.execPath)	#returns None or "" or () if canceled
+	inputFileDir = askdirectory(title="Select directory",initialdir=main.PM.get("projectPath"))	#returns None or "" or () if canceled
 	if inputFileDir is None or inputFileDir == "":return	#canceled selection
 	if not isinstance(inputFileDir,str):return	#other cases
 	files = os.listdir(inputFileDir)
@@ -37,7 +37,7 @@ def findFilesInDir(main):
 	addSeqFiles(main,inputFileList)
 
 def findFilesSelect(main):
-	inputFileList = askopenfilenames(filetypes=[("FastQ",".fastq.gz .fastq")],title="Select sequencing files",initialdir=main.execPath)	#returns None or () if canceled
+	inputFileList = askopenfilenames(filetypes=[("FastQ",".fastq.gz .fastq")],title="Select sequencing files",initialdir=main.PM.get("projectPath"))	#returns None or () if canceled
 	if inputFileList is None or len(inputFileList)==0:return	#canceled selection or nothing selected
 	addSeqFiles(main,inputFileList)
 
@@ -159,7 +159,7 @@ def updateSeqFileList(main):
 	#print(f"[input][Debug] updateSeqFileList took {time.time()-starttime} seconds\n")	#TODO do this in another update!
 
 def selectMainTarget(main,menu):
-	mainTargetPath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.execPath)
+	mainTargetPath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.PM.get("projectPath"))
 	menu.mainTargetPath = mainTargetPath
 	print(f"[input] Selected {menu.mainTargetPath}")
 	
@@ -172,7 +172,7 @@ def selectMainTarget(main,menu):
 		menu.mainLengthVar.set(len(mainSequence))
 
 def addBackgroundTargets(main,menu):
-	targetFileList = askopenfilenames(filetypes=[("Fasta",".fasta .fa .fna .fna.gz"),("EMBL",".embl")],title="Select background sequences",initialdir=main.execPath)
+	targetFileList = askopenfilenames(filetypes=[("Fasta",".fasta .fa .fna .fna.gz"),("EMBL",".embl")],title="Select background sequences",initialdir=main.PM.get("projectPath"))
 	#returns None or () if canceled
 	if targetFileList is None or len(targetFileList)==0:return	#canceled selection or nothing selected
 	menu.offTargets = targetFileList	#TODO this replaces previously selected targets - should implement a better (more GUI complex) way to do this
@@ -214,9 +214,9 @@ def addNewTargetBundleFromMenu(main,menu):
 def addTargetBundleMenu(main):
 	menu = TargetBundleMenu(main.inputFrame_targetFilesList,main)
 	addBundleMenuOuter = ThemedFrame(main.inputFrame_targetFilesList,style="gBorder.TFrame")
-	addBundleMenuOuter.pack(fill="x",expand=True,anchor="nw",padx=5,pady=5)
+	addBundleMenuOuter.pack(fill="x",expand=True,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	addBundleMenu = ThemedFrame(addBundleMenuOuter,style="wBorder.TFrame")
-	addBundleMenu.pack(fill="x",expand=True,anchor="nw",padx=5,pady=5)
+	addBundleMenu.pack(fill="x",expand=True,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
 	#mainpath,label,offTargets
 	ThemedLabel(addBundleMenu,text="Name:",anchor="w").grid(row=0,column=0,columnspan=1,sticky="news")
@@ -285,10 +285,10 @@ def showAnnotation(annotFrame,annotation,annotCount=None):	#just adds widgets di
 
 def addTargetBundleFoldout(main,targetBundle):
 	bundleDescriptionFrameOuter = ThemedFrame(main.inputFrame_targetFilesList,style="gBorder.TFrame")
-	bundleDescriptionFrameOuter.pack(fill="x",anchor="nw",padx=5,pady=5)
+	bundleDescriptionFrameOuter.pack(fill="x",anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
 	bundleDescriptionFrame = ThemedFrame(bundleDescriptionFrameOuter,style="TFrame")
-	bundleDescriptionFrame.pack(fill="x",expand=True,anchor="nw",padx=5,pady=5)
+	bundleDescriptionFrame.pack(fill="x",expand=True,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	ThemedLabel(bundleDescriptionFrame,text=targetBundle.bundleID,anchor="w",style="Medium.TLabel").grid(row=0,column=0,columnspan=4,sticky="new")
 	ThemedLabel(bundleDescriptionFrame,text=targetBundle.comment,anchor="w").grid(row=1,column=0,columnspan=4,sticky="new")
 	ThemedLabel(bundleDescriptionFrame,text="Main target:",anchor="w").grid(row=2,column=0,columnspan=1,sticky="new")

@@ -36,7 +36,6 @@ def loadData(main,export=True,gui=True):
 	updateSIILibPairs(main)
 	libPairs = main.IM.getSIIPairs()	#[(libPos,libNeg,label,TPS)]
 	#print(f"[siI GUI] LibPairs: {libPairs}")
-	main.projectPath =main.PM.get("projectPath")
 	return loadDataIntoGUI(main,libPairs,export=export,gui=gui)
 
 def deleteLibIDPair(main,index):

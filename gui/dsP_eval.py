@@ -182,7 +182,6 @@ def loadData(main,export=True,gui=True):
 	print(f"Selected Libraries:\n{selectedLibIDs}")
 	
 	highlightStyles=getColours(main)
-	main.projectPath =main.PM.get("projectPath")
 	return loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,export=export,highlightStyles=highlightStyles,gui=gui)
 
 def add_dsP_eval_GUI(main):

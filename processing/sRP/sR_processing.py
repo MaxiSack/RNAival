@@ -144,9 +144,8 @@ def runNGmergePipe(main,parameters,force=False):
 	return True
 
 def deleteIntermediateSeqfiles(main,psname,libIDs,paired=False):
-	pp = main.PM.get("projectPath")
-	readDir = os.path.join(pp,"Reads",moduleID,psname,"0_reads")
-	adaptDir = os.path.join(pp,"Reads",moduleID,psname,"1_cutadapt")
+	readDir = os.path.join(main.PM.get("projectPath"),"Reads",moduleID,psname,"0_reads")
+	adaptDir = os.path.join(main.PM.get("projectPath"),"Reads",moduleID,psname,"1_cutadapt")
 	
 	delFiles = {"$out0R1":os.path.join(readDir,"$libID_R1.fastq.gz")}
 	commands = [" > \"$out0R1\""]
@@ -313,6 +312,7 @@ def countReads(main,psname,libIDs,force=False):
 	if len(main.countTmp) == 0:	#Same system as for mapping
 		parameters = main.PM.getDict(tags=["general","project"])
 		parameters.update(main.PM.getParameterSet(psname))
+		parameters["execPath"] = main.execPath
 		main.countTmpParams = parameters
 		grouping = dict()
 		for libID in libIDs:

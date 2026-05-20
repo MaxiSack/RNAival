@@ -164,17 +164,27 @@ class ParameterManager():
 		
 		return value
 	
-	def reset(self,tags=None,tag=None):
-		if tags is None and not tag is None:
-			tags = [tag]
-		print("[PM] Reseting "+str(tags) if not tags is None else "everything")
-		if tags is None:
-			for key in self.parameterDict.keys():
-				self.parameterDict[key][0].set(self.parameterDict[key][2])
-		else:
-			for ttag in tags:
-				for key in self.parametertags[ttag]:
+	def reset(self,tags=None,tag=None,notTags=None):
+		if notTags is None:
+			if tags is None and not tag is None:
+				tags = [tag]
+			print("[PM] Reseting "+str(tags) if not tags is None else "everything")
+			if tags is None:
+				for key in self.parameterDict.keys():
 					self.parameterDict[key][0].set(self.parameterDict[key][2])
+			else:
+				for ttag in tags:
+					for key in self.parametertags[ttag]:
+						self.parameterDict[key][0].set(self.parameterDict[key][2])
+		else:
+			print(f"[PM] Reseting everything except {notTags}")
+			dontResetKeys = set()
+			for ttag in notTags:
+				for key in self.parametertags[ttag]:
+					dontResetKeys.add(key)
+			for key in self.parameterDict.keys():
+				if key in dontResetKeys:continue
+				self.parameterDict[key][0].set(self.parameterDict[key][2])
 	
 	def getDict(self,tags=None,tag=None):
 		valueDict = dict()

@@ -9,15 +9,14 @@ from gui.StyleManager import StyleManager
 from gui.ParameterManager import ParameterManager
 from gui.InputManager import InputManager
 import gui.functions as functions
-#from gui.functions import *
 from functions.commandManager import runCommand
 from gui.inputSelection import updateTargetListFrame
 
 
 class Main():
-	def __init__(self,title,initialTheme="light",execPath="",projectPath=None):
-		self.theme = initialTheme
+	def __init__(self,title,execPath=""):
 		self.execPath = execPath
+		print("[Main] Execution path: "+str(self.execPath))
 		self.mainWindow = Tk(className="RNAival")
 		#self.mainWindow.attributes("-fullscreen", True)
 		self.mainWindow.title(title)
@@ -40,49 +39,50 @@ class Main():
 		self.numberEntryWidth = 8
 		self.foldoutFrameReferenceList = list()
 		self.foldoutStates = list()
-		#self.toggleButtonReferenceList=list()
 		self.toggleButtonReferenceDict=dict()
 		
 		self.mainNotebooktabs = dict()
-		self.libOverrides = dict()	#TODO maybe replace all these with a single dict.....
 		self.comboGraphs = dict()
 		
-		#self.pptList = list()	#added by sR_processing_GUI or other pre-processing scripts
-		self.mapTargets = list()	#["-"]	#filled by adding targets!
-		self.evalTypes = list()	#["-"]	#added by siI_eval and dsP_eval or other evaluation scripts
+		self.mapTargets = list()	#filled by adding targets!
+		self.evalTypes = list()		#added by siI_eval and dsP_eval or other evaluation scripts
 		
 		self.PM = ParameterManager(self)
 		self.IM = InputManager()
-		#initialTheme="dark"
-		self.styleman = StyleManager(self,initialTheme=initialTheme,execPath=execPath)
+		
+		#Program settings
+		self.PM.add("threadsVar","int",16,"Threads error","Number of threads used by external tools.",tag="general")
+		self.PM.add("loadLastProjectOnStartup","bool",True,"Bool error","Wether to load the last project on startup or not.",tag="general")
+		self.PM.add("defaultTheme","text","light","Theme select error","Which theme the application should use by default.",tag="general")
+		
+		functions.loadProgramSettings(self)
+		self.currentTheme = self.PM.get("defaultTheme")
+		self.styleman = StyleManager(self,initialTheme=self.currentTheme,execPath=self.execPath)
+		
+		
+		self.PM.add("projectPath","path","","Project path error","Directory where the project is stored",tag="project")
 		
 		defineGUI(self)
 		
-		print("[Main] Execution path: "+str(self.execPath))
-		if not projectPath is None:
-			loadProject(self,projectPath)
-			#self.PM.set("projectPath",projectPath)
-			#functions.saveSettings(self)
-			#self.PM.loadParameterSets()
-		#self.loadDataIntoGUI()
 	def reset(self):
 		print("\n[Main] resetting everything")
 		self.foldoutFrameReferenceList = list()
 		self.styleman.reset()
-		self.PM.reset()
+		self.PM.reset(notTags=["general"])
 		self.PM.clearPS()
 		self.IM.reset()
 		updateTargetListFrame(self)
 		print("[Main] done.\n")
-	
+	def saveProgramSettings(self):
+		functions.saveProgramSettings(self)
 	def getMain(self):
 		return self.mainWindow
-	def writeLog(self,text,error=False,warn=False):
-		functions.writeLog(self,text,error=error,warn=warn)
-	def writeError(self,text):
-		functions.writeError(self,text)
-	def writeWarning(self,text):
-		functions.writeWarning(self,text)
+	def writeLog(self,text,error=False,warn=False,terminalPrefix=""):
+		functions.writeLog(self,text,error=error,warn=warn,terminalPrefix=terminalPrefix)
+	def writeError(self,text,terminalPrefix=""):
+		functions.writeError(self,text,terminalPrefix=terminalPrefix)
+	def writeWarning(self,text,terminalPrefix=""):
+		functions.writeWarning(self,text,terminalPrefix=terminalPrefix)
 	def getGraphicsOutput(self):
 		return self.outputGraphicsNotebook
 	def showGraphicsTab(self):
@@ -135,12 +135,15 @@ class Main():
 			self.commsQueue.put(("WARN","All Threads killed"))
 	def closeWindow(self):
 		self.terminateThreads()
-		print("Exiting")
+		print("[Main] Exiting")
 		self.getMain().destroy()
 	
 	def runPipeline(main):
 		main.saveSettings()
-		
+		main.writeLog("-"*100,terminalPrefix="---")
+		main.writeLog(f"Processing all files ...",terminalPrefix="[Main] ")
+		main.writeLog("-"*100,terminalPrefix="---")
+		main.pipeStartTime = time.time()
 		usedParameterSets = set()
 		for libID,lib in main.IM.getLibraries().items():
 			usedParameterSets.add(lib.ppt)	#only process the currently selected Parameterset
@@ -159,6 +162,15 @@ class Main():
 		if main.tmp_run_modules_index >= len(main.tmp_run_modules):	#ran all modules
 			main.tmp_run_modules = None
 			main.tmp_run_modules_index = None
+			
+			pipetime = time.time() - main.pipeStartTime
+			if pipetime <300:timeText = f"{int(pipetime)} seconds"
+			elif pipetime<11700:timeText = f"{round(pipetime/60,1)} minutes"
+			else:timeText = f"{round(pipetime/3600,1)} hours"
+			main.writeLog("-"*100,terminalPrefix="---")
+			main.writeLog(f"Processing all files done in {timeText}.",terminalPrefix="[Main] ")
+			main.writeLog("-"*100,terminalPrefix="---")
+			
 			main.saveSettings()
 			main.loadDataIntoGUI()
 		else:
@@ -208,4 +220,4 @@ class Main():
 			return False
 def launch(execPath=None):
 	Main("RNAival - None",execPath=execPath).mainWindow.mainloop()
-	print("Done with siRNA analysis")
+	print("[Main] Done with RNAival GUI")

@@ -22,20 +22,24 @@ def defineGUI(main):
 	#---------------- Menu -------------------
 	mainWindow.option_add('*tearOff', False)	#prevents "tearing off" dropdowns
 	menubar = Menu(mainWindow)
+	main.menubar = menubar
 	mainWindow.config(menu=menubar)
-	menubar.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.textFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	
+	menubar.config(font=main.buttonTextFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
+			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	main.styleman.registredMenus.append(menubar)
 	menubar.add_command(label="New",command=lambda main=main:createNewProjectMenu(main))	#padding?
 	openRecentMenu = Menu(menubar)
-	menubar.add_cascade(menu=openRecentMenu,label="Open recent")
-	openRecentMenu.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.textFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	
+	menubar.add_cascade(menu=openRecentMenu,label="Recent")
+	openRecentMenu.config(font=main.textFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
+			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	main.styleman.registredMenus.append(openRecentMenu)
 	lastProjects = getLastProjects("",execPath=main.execPath)
 	for name,path in lastProjects:
 		openRecentMenu.add_command(label=name,command=lambda main=main,pp=path:loadProject(main,pp))
 	
 	#menubar.add_command(label="Open",command=openProjectList)	#not implemented
-	#menubar.add_command(label="Settings",command=openSettingsMenu)
+	main.settingsMenu = None
+	menubar.add_command(label="Settings",command=lambda main=main:openSettingsMenu(main))	#TODO more spacing / borders between parts!
 	#menubar.add_command(label="About",command=openAboutMenu)
 	#menubar.add_command(label="        ",command=openAboutMenu)
 	#menubar.add_command(label="Project ",command=openAboutMenu)
@@ -53,7 +57,6 @@ def defineGUI(main):
 	main.mainNotebook.add(main.outputTextLog,	text="Program log")
 	main.outputTextLog.tag_configure("error",foreground="#ff0000",font=main.errorLogFont)
 	main.outputTextLog.tag_configure("warn",foreground="#dd8800",font=main.errorLogFont)
-	writeLog(main,"Here goes the log")
 	main.logTabIndex = len(main.mainNotebooktabs.keys())
 	print(f"[GUI def] adding LOG at {main.logTabIndex}")
 	main.mainNotebooktabs[main.logTabIndex] = main.outputTextLog
@@ -61,7 +64,6 @@ def defineGUI(main):
 	# -------------------- loading modules and applying their GUI --------------- 
 	main.moduleDict = loadModules(main)
 	for key,value in main.moduleDict.items():
-		#print(f"\nAdding GUI of module {key}!\n")
 		value.add_GUI(main)
 	
 	# -------------------- GUI for evaluation types --------------- 
@@ -93,19 +95,8 @@ def defineGUI(main):
 	ThemedButton(main.inputFrame,text="Export graphics [tmp]",command=main.exportGraphs).pack(fill="x",anchor="nw")
 	ThemedButton(main.inputFrame,text="Stop program [tmp]",command=main.terminateThreads).pack(fill="x",anchor="nw")
 	
-	#TODO make nicer! general parameters; sould be part of programsettings and/or projectsettings ~
-	#ThemedLabel(inputFoldOutFrame,text="Threads to use").grid(column=2,row=9,columnspan=2,sticky="w")
-	#ThemedEntry(inputFoldOutFrame,width=numberEntryWidth,textvariable=main.addInputVar("threadsVar",StringVar(),"int",16,
-	#	"Number of threads needs to be an integer","Number of threads to be used by cutadapt, NGmerge and bowtie")).grid(column=3,row=9,sticky="e",padx=main.frameBorderSize)
-	main.PM.add("threadsVar","int",16,"Threads error","Threads used of external tools",tag="general")
-	main.PM.add("execPath","path","","Exec path error","Directory where the program runs in",tag="general")
-	
-	main.PM.add("projectPath","path","","Project path error","Directory where the project is stored",tag="project")
-	
 	for i in range(len(main.mainNotebook.tabs())):	#hiding all tabs until a new project has been generated or an existing one was loaded
 		main.mainNotebook.hide(i)
-		#print(f"Hiding notebook tab {i}")
 	
-	main.loadLast = True	#TODO programsetting!
-	if main.loadLast and len(lastProjects)>0:loadProject(main,lastProjects[0][1])
+	if main.PM.get("loadLastProjectOnStartup") and len(lastProjects)>0:loadProject(main,lastProjects[0][1])
 

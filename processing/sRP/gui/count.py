@@ -1,11 +1,8 @@
 
-from tkinter import StringVar
 from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Label as ThemedLabel
 from tkinter.ttk import Entry as ThemedEntry
 from tkinter.ttk import Button as ThemedButton
-
-from gui.functions import addInputVar
 
 from .cutadapt import addThemedEntry
 
@@ -19,10 +16,10 @@ def add_sRP_count_GUI(main,parent):
 	countSettingsFrame = ThemedFrame(countBaseFrame)
 	countSettingsFrame.pack(fill="x",expand=False,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	ThemedLabel(countSettingsFrame,text="Minimum read length",anchor="w").grid(column=0,row=0,sticky="w")
-	addThemedEntry(main,countSettingsFrame,textvariable=addInputVar(main,"sRP-count-minLen",StringVar(),"int",15,
+	addThemedEntry(main,countSettingsFrame,textvariable=main.PM.add("sRP-count-minLen","int",15,
 		"Minimum length needs to be an integer!","Minimum length of reads to count",tag="sRP-count")).grid(column=1,row=0,sticky="e",padx=main.frameBorderSize)
 	ThemedLabel(countSettingsFrame,text="Maximum read length",anchor="w").grid(column=0,row=1,sticky="w")
-	addThemedEntry(main,countSettingsFrame,textvariable=addInputVar(main,"sRP-count-maxLen",StringVar(),"int",30,
+	addThemedEntry(main,countSettingsFrame,textvariable=main.PM.add("sRP-count-maxLen","int",30,
 		"Maximum length needs to be an integer!","Maximum length of reads to count",tag="sRP-count")).grid(column=1,row=1,sticky="e",padx=main.frameBorderSize)
 	ThemedButton(countSettingsFrame,text="Reset to defaults",command=lambda main=main: resetCount(main)).grid(column=0,row=2,columnspan=3,sticky="ew")
 	

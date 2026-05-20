@@ -13,6 +13,7 @@ class StyleManager:
 		self.mainWindow = self.main.mainWindow
 		
 		self.registredStyledTextFields = list()
+		self.registredMenus = list()
 		self.registredOptionMenus = list()
 		self.registredOptionMenuButtons = list()
 		
@@ -203,15 +204,19 @@ class StyleManager:
 				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.triUp
 				else: fbi["image"]=self.main.triDown
 		
+		#These are only used for the menubar and therefore project independent (static)
+		for menu in self.registredMenus:
+			menu.config(fg=self.textColour,bg=self.backgroundColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+		
 		#These are only used for libraries and therefore project-dependent (dynamic)
 		for optionMenu in self.registredOptionMenus:
-			optionMenu.config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
-			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+			optionMenu.config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 		
 		#registredOptionMenuButtons
 		for optionMenu in self.registredOptionMenuButtons:
-			optionMenu.config(bg=self.buttonColour,fg=self.buttonTextColour,font=self.main.buttonTextFont,activeforeground=self.textColour,activebackground=self.buttonHighlightColour)
-			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,font=self.main.logFont,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+			optionMenu.config(bg=self.buttonColour,fg=self.buttonTextColour,activeforeground=self.textColour,activebackground=self.buttonHighlightColour)
+			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 		
 	
 	def reset(self):

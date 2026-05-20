@@ -20,6 +20,7 @@ from tkinter.filedialog import askdirectory
 import iostuff.seqFiles as seqIO
 from gui.inputSelection import updateSeqFiles,updateTargetListFrame,saveSeqFiles
 import gui.siI_eval as sig
+from gui.SettingsMenu import SettingsMenu
 
 nucset={"A","C","G","T","U","N"}
 idset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","_","-"}
@@ -138,9 +139,8 @@ def loadProject(main,pp):
 		print(f"[main func] ERROR, File {settingsFile} not found.")
 
 def saveSettings(main):
-	pp = main.PM.get("projectPath")
-	print(f"[main func] Saving settings to {pp}")
-	lastProjects = [pp]
+	print(f"[main func] Saving settings to {main.PM.get("projectPath")}")
+	lastProjects = [main.PM.get("projectPath")]
 	lppath = os.path.join(main.PM.get("execPath"),".lastProjects")
 	try:
 		with open(lppath,"r") as lpr:
@@ -158,7 +158,7 @@ def saveSettings(main):
 	#print(main.PM.toString())
 	#print(main.IM.toString())
 	saveConstruct = ["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
-	with open(os.path.join(pp,"ProjectSettings.json"),"w") as jw:
+	with open(os.path.join(main.PM.get("projectPath"),"ProjectSettings.json"),"w") as jw:
 		json.dump(saveConstruct,jw,indent="\t",sort_keys=True)
 
 def openProjectList():
@@ -194,7 +194,11 @@ def exportGraphs(main):
 	import evaluation.dsP_eval as dspe
 	dspe.exportGraphs(main)
 
-def writeLog(main,text,error=False,warn=False):
+def writeLog(main,text,error=False,warn=False,terminalPrefix=""):
+	if error:print(terminalPrefix+"[ERROR] "+text)
+	elif warn:print(terminalPrefix+"[WARNING] "+text)
+	elif not terminalPrefix == "":print(terminalPrefix+text)
+	
 	main.outputTextLog["state"]="normal"
 	main.outputTextLog.insert("end","\n"+str(text))
 	#TODO loop over lines to handle multi-line errors	#But what about empty lines? do they cause errors with split("\n") ?
@@ -205,9 +209,9 @@ def writeLog(main,text,error=False,warn=False):
 	main.outputTextLog.see("end")
 	try:
 		with open(main.logFile,"a") as logWriter:
-			if error: logWriter.write("[ERROR] "+str(text)+"\n")
-			elif warn: logWriter.write("[WARNING] "+str(text)+"\n")
-			else: logWriter.write(str(text)+"\n")
+			if error: logWriter.write(terminalPrefix+"[ERROR] "+str(text)+"\n")
+			elif warn: logWriter.write(terminalPrefix+"[WARNING] "+str(text)+"\n")
+			else: logWriter.write(terminalPrefix+str(text)+"\n")
 	except:
 		print("[main func] ERROR while writing log to disk!\nCheck your available disk space!")
 		main.outputTextLog["state"]="normal"
@@ -218,25 +222,26 @@ def writeLog(main,text,error=False,warn=False):
 		main.outputTextLog["state"]="disabled"
 		main.outputTextLog.see("end")
 	
-def writeError(main,text):
-	writeLog(main,text,error=True)
+def writeError(main,text,terminalPrefix=""):
+	writeLog(main,text,error=True,terminalPrefix=terminalPrefix)
 	main.mainNotebook.select(main.logTabIndex)
-	print("[main func] [ERROR] "+text)
-def writeWarning(main,text):
-	writeLog(main,text,warn=True)
+def writeWarning(main,text,terminalPrefix=""):
+	writeLog(main,text,warn=True,terminalPrefix=terminalPrefix)
 	
 def getStyledText(main,parent):
 	return main.styleman.getStyledText(parent)
 	
 def switchTheme(main):
-	if main.theme == "light":main.theme="dark"
-	else:main.theme="light"
-	main.styleman.applyTheme(main.theme)
+	if main.currentTheme == "light":
+		main.currentTheme="dark"
+		main.menubar.entryconfigure(3,label="Lightmode")
+	else:
+		main.currentTheme="light"
+		main.menubar.entryconfigure(3,label="Darkmode")
+	main.styleman.applyTheme(main.currentTheme)
 
-def addInputVar(main,name,var,vartype,default,errormessage,desc,tag=None):
-	return main.PM.add(name,vartype,default,errormessage,desc,tags=None,tag=tag)
 def addGraphicVar(main,name,var,vartype,default,errormessage,desc):
-	return main.PM.add(name,vartype,default,errormessage,desc,tags=None,tag="graphics")
+	return main.PM.add(name,vartype,default,errormessage,desc,tags=None,tag="graphics")	#TODO this should also be removed when the eval things become modules
 	
 def toggleBoolButton(main,ID):
 	#print(f"[main func] Set: {ID} {main.toggleButtonReferenceDict[ID][1]}")
@@ -249,10 +254,8 @@ def toggleBoolButton(main,ID):
 			button["image"]=main.xBoxImage
 		main.toggleButtonReferenceDict[ID][1].set(True)
 	#print("[main func] Set bool to "+str(main.toggleButtonReferenceDict[ID][1].get()))
-	#print(main.libOverrides)
 
 def createTogglebutton(main,parent,boolVar,syncKey=None):
-	#boolVar.get()
 	ID = len(main.toggleButtonReferenceDict.keys()) if syncKey is None else syncKey
 	tb = ThemedButton(parent,command=lambda main=main,i=ID: toggleBoolButton(main,i),style="internalDropClosed.TButton",image=main.boxImage)
 	if not ID in main.toggleButtonReferenceDict:main.toggleButtonReferenceDict[ID] = [list(),boolVar]
@@ -408,8 +411,9 @@ def loadModules(main):
 				moduleBase = os.path.join(moduleDir,entry)
 				moduleMain = os.path.join(moduleBase,"main.py")
 				if not os.path.isfile(moduleMain):
-					main.writeError("ERROR! Found a module, but no main file "+str(moduleMain))
-					return False
+					main.writeError(f"ERROR! Found module {entry}, but it contains no main file \"{os.path.join(entry,"main.py")}\""
+						,terminalPrefix="[main func][loadModules]")
+					continue
 				moduleName = f"processing.{entry}.main"
 				module = import_module(moduleName)
 				moduleID = module.moduleID
@@ -422,3 +426,22 @@ def loadModules(main):
 			continue
 	return moduleDict
 
+def loadProgramSettings(main):
+	settingsFile = os.path.join(main.execPath,"Settings.json")
+	if os.path.isfile(settingsFile):
+		with open(settingsFile,"r") as jr:
+			jsonstr = jr.read()
+			generalSettingsDict = json.loads(jsonstr)
+			main.PM.setAll(generalSettingsDict)
+
+def saveProgramSettings(main):	#save is called only when you manually change the settings, otherwise it just uses the defautls (?)
+	generalSettingsDict = main.PM.getDict(tag="general")
+	settingsFile = os.path.join(main.PM.get("execPath"),"Settings.json")
+	with open(settingsFile,"w") as jw:
+		json.dump(generalSettingsDict,jw,indent="\t",sort_keys=True)
+	
+def openSettingsMenu(main):
+	if main.settingsMenu is None:	#If it doesnt exist, create it
+		main.settingsMenu = SettingsMenu(main)	
+	else: #otherwise, it is always on top, so just center it
+		main.settingsMenu.center()

@@ -12,7 +12,6 @@ from graphs.drawGraphics import interpolateColoursFraction
 # execution related functions ---------------------------------------------------------------
 #TODO can also be modularised, like ppt modules
 def loadDataIntoGUI(main,libPairs,gui=True,export=True):
-	projectPath = main.PM.get("projectPath")
 	#if not main.PM.validateTags(["graphics"]):return False
 	
 	if gui:main.writeLog("\n-------------------------------------------------------\nLoading siI data into GUI")
@@ -30,9 +29,9 @@ def loadDataIntoGUI(main,libPairs,gui=True,export=True):
 			continue
 		
 		targetBundle = main.IM.getTarget(bundleID)
-		countDir = os.path.join(projectPath,"Counts",bundleID,psname)
+		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
 		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
-		resultDir = os.path.join(projectPath,"Graphics",bundleID,psname)
+		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",bundleID,psname)
 		Path(resultDir).mkdir(parents=True, exist_ok=True)
 		#print(f"[siI eval] Countfiles: {countFile}")
 		countData = lg.loadCounts(main,countFile,libIDs,targetBundle.mainLength)
