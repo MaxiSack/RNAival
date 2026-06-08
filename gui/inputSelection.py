@@ -11,6 +11,7 @@ from tkinter import Tk
 from tkinter import Text
 from tkinter import Menu
 from tkinter import OptionMenu
+from tkinter import Canvas
 
 from tkinter import BooleanVar
 from tkinter import StringVar
@@ -25,6 +26,7 @@ from tkinter.filedialog import askopenfilenames
 from tkinter.filedialog import askopenfilename
 
 import gui.functions as gfs
+from gui.ScrollableFrame import ScrollableFrame
 import iostuff.seqFiles as seqIO
 
 def findFilesInDir(main):
@@ -347,54 +349,65 @@ def add_inputGUI(main):
 	main.mainNotebook.add(main.inputFrame,text="Input selection")
 	main.mainNotebooktabs[notebookIndex] = main.inputFrame
 	
+	#---------------- tmp -------------------
+	ThemedButton(main.inputFrame,text="Run entire pipeline",command=lambda main=main:main.runPipeline()).pack(fill="x",anchor="nw",side="bottom")
+	ThemedButton(main.inputFrame,text="Save settings [tmp]",command=lambda main=main:gfs.saveSettings(main)).pack(fill="x",anchor="nw",side="bottom")
+	ThemedButton(main.inputFrame,text="Load graphics [tmp]",command=main.loadDataIntoGUI).pack(fill="x",anchor="nw",side="bottom")
+	ThemedButton(main.inputFrame,text="Export graphics [tmp]",command=main.exportGraphs).pack(fill="x",anchor="nw",side="bottom")
+	ThemedButton(main.inputFrame,text="Stop program [tmp]",command=main.terminateThreads).pack(fill="x",anchor="nw",side="bottom")
+	
+	# --------------------- main ----------------
 	inputFrame_main = ThemedFrame(main.inputFrame,style="gBorder.TFrame")
 	inputFrame_main.pack(fill="both",expand=True,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
+	inputFrame_main.rowconfigure(0,weight=1)
+	inputFrame_main.columnconfigure(0,weight=1,uniform="fred")	# Inputfiles
+	inputFrame_main.columnconfigure(1,weight=1,uniform="fred")	# Targets
 	
-	# --------------------- read libraries ----------------
+	# --------------------- read libraries // inputfiles ----------------
 	inputFrame_seqFiles = ThemedFrame(inputFrame_main,style="TFrame")
 	inputFrame_seqFiles.grid(row=0,column=0,sticky="news",padx=main.frameBorderSize,pady=main.frameBorderSize)
-	ThemedLabel(inputFrame_seqFiles,text="Select sequencing libraries",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=2,sticky="news",padx=main.frameBorderSize)
-	
-	ThemedButton(inputFrame_seqFiles,text="Select directory",command=lambda main=main:findFilesInDir(main)).grid(column=0,row=1,sticky="news")
-	ThemedButton(inputFrame_seqFiles,text="Select files",command=lambda main=main:findFilesSelect(main)).grid(column=1,row=1,sticky="news")
-	
-	main.seqFileDict = dict()	#TODO this needs a scrollbar!; more accurately: place this on a canvas which is next to a scrollbar on a frame
-	main.seqFileListFrame = ThemedFrame(inputFrame_seqFiles,style="TFrame")
-	main.seqFileListFrame.grid(column=0,row=2,columnspan=2,sticky="news")
-	
-	main.seqFileListFrame.columnconfigure(0,weight=2)
-	main.seqFileListFrame.columnconfigure(1,weight=2)
-	main.seqFileListFrame.columnconfigure(2,weight=0)
-	main.seqFileListFrame.columnconfigure(3,weight=0)
-	main.seqFileListFrame.columnconfigure(4,weight=0)
-	main.seqFileListFrame.columnconfigure(5,weight=0)
-	
-	ThemedButton(inputFrame_seqFiles,text="Save Changes",command=lambda main=main:saveSeqFiles(main)).grid(column=0,row=3,columnspan=2,sticky="news")
-	
+	inputFrame_seqFiles.rowconfigure(0,weight=0,uniform="fred")	# Heading
+	inputFrame_seqFiles.rowconfigure(1,weight=0,uniform="fred")	# Selection Buttons
+	inputFrame_seqFiles.rowconfigure(2,weight=1)			# List
+	inputFrame_seqFiles.rowconfigure(3,weight=0,uniform="fred")	# Save Button
 	inputFrame_seqFiles.columnconfigure(0,weight=1,uniform="fred")
 	inputFrame_seqFiles.columnconfigure(1,weight=1,uniform="fred")
 	
-	inputFrame_seqFiles.rowconfigure(0,weight=0,uniform="fred")
-	inputFrame_seqFiles.rowconfigure(1,weight=0,uniform="fred")
-	inputFrame_seqFiles.rowconfigure(2,weight=1)
-	inputFrame_seqFiles.rowconfigure(3,weight=0,uniform="fred")
+	ThemedLabel(inputFrame_seqFiles,text="Select sequencing libraries",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=2,sticky="news",padx=main.frameBorderSize)
+	ThemedButton(inputFrame_seqFiles,text="Select directory",command=lambda main=main:findFilesInDir(main)).grid(column=0,row=1,sticky="news")
+	ThemedButton(inputFrame_seqFiles,text="Select files",command=lambda main=main:findFilesSelect(main)).grid(column=1,row=1,sticky="news")
+	
+	seqFileListBaseFrame = ScrollableFrame(inputFrame_seqFiles,style="TFrame")
+	seqFileListBaseFrame.grid(column=0,row=2,columnspan=2,sticky="news")
+	seqFileListBaseFrame.setCanvasBG(main.styleman.backgroundColour)
+	main.styleman.registredBG.append(seqFileListBaseFrame)
+	
+	main.seqFileListFrame = seqFileListBaseFrame.getInnerFrame()
+	main.seqFileListFrame.columnconfigure(0,weight=2)	# Label
+	main.seqFileListFrame.columnconfigure(1,weight=2)	# Comment
+	main.seqFileListFrame.columnconfigure(2,weight=0)	# PPT
+	main.seqFileListFrame.columnconfigure(3,weight=0)	# Target
+	main.seqFileListFrame.columnconfigure(4,weight=0)	# Evaltype
+	main.seqFileListFrame.columnconfigure(5,weight=0)	# X
+	main.seqFileDict = dict()
+	
+	ThemedButton(inputFrame_seqFiles,text="Save Changes",command=lambda main=main:saveSeqFiles(main)).grid(column=0,row=3,columnspan=2,sticky="news")
 	
 	# --------------------- construct/targets ----------------
 	inputFrame_targetFiles = ThemedFrame(inputFrame_main,style="TFrame")
 	inputFrame_targetFiles.grid(row=0,column=1,sticky="news",padx=main.frameBorderSize,pady=main.frameBorderSize)
+	inputFrame_targetFiles.rowconfigure(0,weight=0,uniform="fred")	# Heading
+	inputFrame_targetFiles.rowconfigure(1,weight=0,uniform="fred")	# Add-new Button
+	inputFrame_targetFiles.rowconfigure(2,weight=1)			# List
+	inputFrame_targetFiles.columnconfigure(0,weight=1)
 	
 	ThemedLabel(inputFrame_targetFiles,text="Select targets for mapping",anchor="w",style="Medium.TLabel").grid(row=0,column=0,sticky="news",padx=main.frameBorderSize)
 	ThemedButton(inputFrame_targetFiles,text="Add new target",command = lambda main=main:addTargetBundleMenu(main)).grid(row=1,column=0,sticky="news")
-	main.inputFrame_targetFilesList = ThemedFrame(inputFrame_targetFiles,style="TFrame")	#TODO this also needs a scrollbar!
-	main.inputFrame_targetFilesList.grid(row=2,column=0,sticky="news")
 	
-	inputFrame_targetFiles.rowconfigure(0,weight=0,uniform="fred")
-	inputFrame_targetFiles.rowconfigure(1,weight=0,uniform="fred")
-	inputFrame_targetFiles.rowconfigure(2,weight=1)
-	inputFrame_targetFiles.columnconfigure(0,weight=1)
+	inputFrame_targetFilesListBase = ScrollableFrame(inputFrame_targetFiles,style="TFrame")
+	inputFrame_targetFilesListBase.grid(row=2,column=0,sticky="news")
+	main.inputFrame_targetFilesList = inputFrame_targetFilesListBase.getInnerFrame()
+	inputFrame_targetFilesListBase.setCanvasBG(main.styleman.backgroundColour)
+	main.styleman.registredBG.append(inputFrame_targetFilesListBase)
 	
-	# --------------------- main ----------------
-	inputFrame_main.rowconfigure(0,weight=1)
-	inputFrame_main.columnconfigure(0,weight=1,uniform="fred")
-	inputFrame_main.columnconfigure(1,weight=1,uniform="fred")
 

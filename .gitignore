@@ -1,0 +1,11 @@
+# Python stuff
+__pycache__/
+__init__.py
+
+# Program logging
+terminal.log
+log.txt
+
+# Settings
+.lastProjects
+Settings.json

@@ -78,7 +78,7 @@ def showAllTabs(main):
 def createNewProject(main,projectParentPath,newWindow):
 	name = newWindow.projectNameVar.get()
 	newWindow.destroy()
-	execPath = main.PM.get("execPath")
+	execPath = main.execPath
 	
 	pp=os.path.join(projectParentPath,name)
 	print(f"\n\n[main func] Creating new project {name} at {projectParentPath}: {pp}\n\n")
@@ -117,8 +117,19 @@ def loadProject(main,pp):
 		showAllTabs(main)
 		with open(settingsFile,"r") as jr:
 			jsonstr = jr.read()
-			#["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
-			_,parameterDict,_,inputDict = json.loads(jsonstr)
+			
+			settingsObject = json.loads(jsonstr)
+			
+			if isinstance(settingsObject, dict):	#new(er) storage system, split by type of data/setting
+				parameterDict = settingsObject
+				inputListFile = os.path.join(pp,"InputFiles.json")	#TODO make nicer, split siI pairs of
+				with open(inputListFile,"r") as jr:
+					jsonstr = jr.read()
+					inputDict = json.loads(jsonstr)
+			elif isinstance(settingsObject, list):	#Old storage system
+				#["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
+				_,parameterDict,_,inputDict = json.loads(jsonstr)
+		
 		main.PM.setAll(parameterDict)
 		main.PM.loadParameterSets()
 		main.IM.setAll(inputDict,main=main)
@@ -138,10 +149,9 @@ def loadProject(main,pp):
 	else:
 		print(f"[main func] ERROR, File {settingsFile} not found.")
 
-def saveSettings(main):
-	print(f"[main func] Saving settings to {main.PM.get("projectPath")}")
-	lastProjects = [main.PM.get("projectPath")]
-	lppath = os.path.join(main.PM.get("execPath"),".lastProjects")
+def updateLastProjectsFile(currentProject,execPath):
+	lastProjects = [currentProject]
+	lppath = os.path.join(execPath,".lastProjects")
 	try:
 		with open(lppath,"r") as lpr:
 			for line in lpr:
@@ -151,15 +161,26 @@ def saveSettings(main):
 	except:
 		pass
 	with open(lppath,"w") as lpw: lpw.write("\n".join(lastProjects[:10]))
+
+def saveSettings(main):
+	print(f"[main func] Saving settings to {main.PM.get("projectPath")}")
+	
+	updateLastProjectsFile(main.PM.get("projectPath"),main.execPath)
+	
+	#print(main.PM.toString())
+	#main.PM.printTags()
+	projectSettings = main.PM.getDict(tags=["project","graphics"])
+	#print(projectSettings)
+	with open(os.path.join(main.PM.get("projectPath"),"ProjectSettings.json"),"w") as jw:
+		json.dump(projectSettings,jw,indent="\t",sort_keys=True)
 	
 	#updateSeqFiles(main)
 	saveSeqFiles(main)
 	sig.updateSIILibPairs(main)
-	#print(main.PM.toString())
 	#print(main.IM.toString())
-	saveConstruct = ["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
-	with open(os.path.join(main.PM.get("projectPath"),"ProjectSettings.json"),"w") as jw:
-		json.dump(saveConstruct,jw,indent="\t",sort_keys=True)
+	with open(os.path.join(main.PM.get("projectPath"),"InputFiles.json"),"w") as jw:
+		json.dump(main.IM.serialize(),jw,indent="\t",sort_keys=True)
+	
 
 def openProjectList():
 	print("[main func] [WIP] Showing project list")
@@ -234,10 +255,10 @@ def getStyledText(main,parent):
 def switchTheme(main):
 	if main.currentTheme == "light":
 		main.currentTheme="dark"
-		main.menubar.entryconfigure(3,label="Lightmode")
+		main.menubar.entryconfigure(3,label=" Lightmode ")
 	else:
 		main.currentTheme="light"
-		main.menubar.entryconfigure(3,label="Darkmode")
+		main.menubar.entryconfigure(3,label=" Darkmode ")
 	main.styleman.applyTheme(main.currentTheme)
 
 def addGraphicVar(main,name,var,vartype,default,errormessage,desc):
@@ -338,10 +359,12 @@ def makeParameterToggleFrame(main,parent,heading):	#only used by dsp_eval, but d
 
 def addOutputGraphicsGroup(main,key):	#add new notebook for graphs with the same target/key to the graphicla output
 	#print(f"\n[Fun] Output Graphics Groups: {main.outputGroups}\n")
-	#print(f"\n[Fun] New Key: {key}\n")
 	if not key in main.outputGroups:	#but dont overwrite existing; just add graphs to the notebook (that was created by another function)
-		keyBaseFrame = ThemedFrame(main.outputGraphicsNotebook,style="TEST.TFrame")
-		main.outputGraphicsNotebook.add(keyBaseFrame,text=str(key),sticky="news")
+		#print(f"[Fun] New Key: {key}")
+		paddingkeyBaseFrame = ThemedFrame(main.outputGraphicsNotebook,style="gBorder.TFrame")
+		main.outputGraphicsNotebook.add(paddingkeyBaseFrame,text=str(key),sticky="news")
+		keyBaseFrame = ThemedFrame(paddingkeyBaseFrame)#,style="TEST.TFrame")
+		keyBaseFrame.pack(fill="both",expand=True,pady=(main.frameBorderSize*2,0))	#Only pad top for visibility, rest has enough border already
 		#keyNotebook = Notebook(main.outputGraphicsNotebook)
 		#main.outputGraphicsNotebook.add(keyNotebook,text=str(key))
 		keyScrollbar = ThemedScrollbar(keyBaseFrame,orient="vertical",command=lambda *args, main=main,key=key:scrollGraphicsOutput(main,key,*args))
@@ -436,7 +459,7 @@ def loadProgramSettings(main):
 
 def saveProgramSettings(main):	#save is called only when you manually change the settings, otherwise it just uses the defautls (?)
 	generalSettingsDict = main.PM.getDict(tag="general")
-	settingsFile = os.path.join(main.PM.get("execPath"),"Settings.json")
+	settingsFile = os.path.join(main.execPath,"Settings.json")
 	with open(settingsFile,"w") as jw:
 		json.dump(generalSettingsDict,jw,indent="\t",sort_keys=True)
 	

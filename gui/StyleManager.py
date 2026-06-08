@@ -14,6 +14,7 @@ class StyleManager:
 		
 		self.registredStyledTextFields = list()
 		self.registredMenus = list()
+		self.registredBG = list()
 		self.registredOptionMenus = list()
 		self.registredOptionMenuButtons = list()
 		
@@ -77,7 +78,7 @@ class StyleManager:
 				
 			if theme == "light":#sky+juicy green
 				self.buttonColour = "#339966"
-				self.buttonDarkColour = "#117744"
+				self.buttonDarkColour = "#0f7040"
 				self.buttonHighlightColour = "#33aa77"
 				
 				self.textColour = "#000000"
@@ -100,7 +101,7 @@ class StyleManager:
 				
 			elif theme == "dark":#black+dark turquoise
 				self.buttonColour = "#226955"
-				self.buttonDarkColour = "#115935"
+				self.buttonDarkColour = "#0d4530"
 				self.buttonHighlightColour = "#207f66"
 				
 				self.textColour = "#e6e6e6"
@@ -208,19 +209,23 @@ class StyleManager:
 		for menu in self.registredMenus:
 			menu.config(fg=self.textColour,bg=self.backgroundColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 		
+		#These are only used for the menubar and therefore project independent (static)
+		for scrollFrame in self.registredBG:
+			scrollFrame.setCanvasBG(self.backgroundColour)
+		
 		#These are only used for libraries and therefore project-dependent (dynamic)
 		for optionMenu in self.registredOptionMenus:
 			optionMenu.config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 		
-		#registredOptionMenuButtons
+		#These are only used for siI eval and therefore project-dependent (dynamic)
 		for optionMenu in self.registredOptionMenuButtons:
 			optionMenu.config(bg=self.buttonColour,fg=self.buttonTextColour,activeforeground=self.textColour,activebackground=self.buttonHighlightColour)
 			optionMenu["menu"].config(bg=self.backgroundColour,fg=self.textColour,activeforeground=self.textColour,activebackground=self.textBackgroundColour)
-		
 	
 	def reset(self):
 		self.registredOptionMenus = list()
+		self.registredOptionMenuButtons = list()
 	
 	def getStyledText(self,parent):
 		textfield = Text(parent,state="disabled",font=self.main.logFont,bg=self.textBackgroundColour,fg=self.textColour,selectbackground=self.textSelectedBackgroundColour,

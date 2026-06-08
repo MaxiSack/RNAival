@@ -27,9 +27,9 @@ def defineGUI(main):
 	menubar.config(font=main.buttonTextFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
 			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 	main.styleman.registredMenus.append(menubar)
-	menubar.add_command(label="New",command=lambda main=main:createNewProjectMenu(main))	#padding?
+	menubar.add_command(label=" New ",command=lambda main=main:createNewProjectMenu(main))	#padding?
 	openRecentMenu = Menu(menubar)
-	menubar.add_cascade(menu=openRecentMenu,label="Recent")
+	menubar.add_cascade(menu=openRecentMenu,label=" Recent ")
 	openRecentMenu.config(font=main.textFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
 			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 	main.styleman.registredMenus.append(openRecentMenu)
@@ -39,11 +39,11 @@ def defineGUI(main):
 	
 	#menubar.add_command(label="Open",command=openProjectList)	#not implemented
 	main.settingsMenu = None
-	menubar.add_command(label="Settings",command=lambda main=main:openSettingsMenu(main))	#TODO more spacing / borders between parts!
+	menubar.add_command(label=" Settings ",command=lambda main=main:openSettingsMenu(main))
 	#menubar.add_command(label="About",command=openAboutMenu)
 	#menubar.add_command(label="        ",command=openAboutMenu)
 	#menubar.add_command(label="Project ",command=openAboutMenu)
-	menubar.add_command(label="Darkmode",command=lambda main=main:switchTheme(main))
+	menubar.add_command(label=" Darkmode ",command=lambda main=main:switchTheme(main))
 	
 	mainWindow.bind_all("<Control-d>",lambda event,main=main:switchTheme(main))
 	
@@ -74,9 +74,14 @@ def defineGUI(main):
 	
 	main.graphicsTabIndex = len(main.mainNotebooktabs.keys())
 	print(f"[GUI def] adding Graphics at {main.graphicsTabIndex}")
-	main.outputGraphicsNotebook = Notebook(main.mainNotebook)
-	main.mainNotebook.add(main.outputGraphicsNotebook,text="Graphical output")
-	main.mainNotebooktabs[main.graphicsTabIndex] = main.outputGraphicsNotebook
+	
+	graphicsPadding = ThemedFrame(main.mainNotebook,style="gBorder.TFrame")
+	main.mainNotebook.add(graphicsPadding,text="Graphical output")
+	main.mainNotebooktabs[main.graphicsTabIndex] = graphicsPadding
+	
+	main.outputGraphicsNotebook = Notebook(graphicsPadding)
+	main.outputGraphicsNotebook.pack(fill="both",expand=True,padx=main.frameBorderSize*2,pady=main.frameBorderSize*2)
+	#main.mainNotebook.add(main.outputGraphicsNotebook,text="Graphical output")
 	main.outputGroups = dict()	#target-key -> notebook
 	
 	
@@ -86,14 +91,6 @@ def defineGUI(main):
 	main.outputTextField.config(tabs = "6c")
 	main.mainNotebook.add(main.outputTextField,text="Textual output")
 	main.mainNotebooktabs[textNotebookIndex] = main.outputTextField
-	
-	
-	#---------------- tmp -------------------
-	ThemedButton(main.inputFrame,text="Run entire pipeline",command=lambda main=main:main.runPipeline()).pack(fill="x",anchor="nw")
-	ThemedButton(main.inputFrame,text="Save settings [tmp]",command=lambda main=main:saveSettings(main)).pack(fill="x",anchor="nw")
-	ThemedButton(main.inputFrame,text="Load graphics [tmp]",command=main.loadDataIntoGUI).pack(fill="x",anchor="nw")
-	ThemedButton(main.inputFrame,text="Export graphics [tmp]",command=main.exportGraphs).pack(fill="x",anchor="nw")
-	ThemedButton(main.inputFrame,text="Stop program [tmp]",command=main.terminateThreads).pack(fill="x",anchor="nw")
 	
 	for i in range(len(main.mainNotebook.tabs())):	#hiding all tabs until a new project has been generated or an existing one was loaded
 		main.mainNotebook.hide(i)

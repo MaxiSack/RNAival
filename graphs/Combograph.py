@@ -171,8 +171,11 @@ class Combograph:
 		if self.graphFrame is None:
 			notebook,scrollbar,scrollList = fun.addOutputGraphicsGroup(main,self.groupID)
 			#print(f"[Combo] generating new Tab {self.groupID}")
-			self.graphFrame = ThemedFrame(notebook,style="TEST.TFrame")
-			notebook.add(self.graphFrame,text=self.title)
+			padFrame = ThemedFrame(notebook,style="gBorder.TFrame")
+			notebook.add(padFrame,text=self.title)
+			
+			self.graphFrame = ThemedFrame(padFrame,style="TEST.TFrame")
+			self.graphFrame.pack(fill="both",expand=True,pady=(main.frameBorderSize*2,0))
 			
 			self.graphCanvas = Canvas(self.graphFrame)#,bg=self.backgroundColour,highlightthickness=0)
 			scrollList.append(self.graphCanvas)
@@ -193,9 +196,9 @@ class Combograph:
 		#graphWidth = basegui.mainNotebook.winfo_width()
 		graphWidth = main.mainNotebook.winfo_width()-30	#TODO refer to combo parentframe !
 		#graphHeight = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
-		graphHeight = main.mainNotebook.winfo_height()*0.38
+		graphHeight = main.mainNotebook.winfo_height()*0.37
 		#if graphHeightlen(self.allGraphData.keys())==1: = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
-		if len(self.allGraphData.keys())==1:graphHeight = main.mainNotebook.winfo_height()*0.80
+		if len(self.allGraphData.keys())==1:graphHeight = main.mainNotebook.winfo_height()*0.75
 		for (graphName,graphData) in self.allGraphData.items():
 			xlab,ylab = self.axislabels[graphName]
 			#print("\nLABELS: "+str(self.axislabels[graphName]))
@@ -219,7 +222,7 @@ class Combograph:
 		self.connectedGraphs.append(comboGraph)
 	
 	def selectPoint(self, pos):
-		#print("[Combo] Selecting point "+str(pos))
+		#print(f"[Combo] ({self.title}) Selecting point {pos}")
 		self.selectedPoints.add(pos)
 		for igraph in self.IGdict.values():
 			igraph.selectPoint(pos)

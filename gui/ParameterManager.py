@@ -18,7 +18,12 @@ class ParameterManager():
 		self.parameterDict = dict()	#used for parameters added by the GUI
 		self.parametertags = dict()
 		self.parameterSetDict = dict()
-		
+	
+	def printTags(self):
+		print("[PM] Tags:")
+		for key,value in self.parametertags.items():
+			print(f"\t{key}:\t{", ".join(value)}")
+	
 	def getPSName(self):
 		initialID = len(self.parameterSetDict)
 		while f"PS-{initialID}" in self.parameterSetDict:

@@ -5,10 +5,11 @@ from tkinter import StringVar
 from tkinter.ttk import Label as ThemedLabel
 from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Button as ThemedButton
-#from tkinter.ttk import Scrollbar as ThemedScrollbar
 from tkinter.ttk import Entry as ThemedEntry
+from tkinter.ttk import Radiobutton as ThemedRadioButton
 
 from evaluation.siI_eval import loadDataIntoGUI
+from gui.ScrollableFrame import ScrollableFrame
 
 def updateSIILibPairs(main):
 	main.IM.resetLibPairs()
@@ -19,24 +20,29 @@ def updateSIILibPairs(main):
 		if selectedTPS == "-":continue
 		libPos = list(pair[0].keys())
 		libNeg = list(pair[1].keys())
-		#TODO validate startVar.get() and endVar.get() and also supply them to IM	#re-implement region selection for pairs
-		#try:
-		#	regionStart = int(startVar.get())
-		#except:
-		#	main.writeError(f"Region start for {libPos}-{libNeg} needs to be an integer!")
-		#	continue
-		#try:
-		#	regionEnd = int(endVar.get())
-		#except:
-		#	main.writeError(f"Region end for {libPos}-{libNeg} needs to be an integer!")
-		#	continue
-		main.IM.addSIIPair(libPos,libNeg,pairLabelVar.get(),main.IM.getTPSTuple(selectedTPS))
+		
+		try:
+			regionStart = int(startVar.get())
+		except:
+			main.writeError(f"Region start for {libPos}-{libNeg} needs to be an integer!")
+			continue
+		try:
+			regionEnd = int(endVar.get())
+		except:
+			main.writeError(f"Region end for {libPos}-{libNeg} needs to be an integer!")
+			continue
+		
+		main.IM.addSIIPair(libPos,libNeg,pairLabelVar.get(),main.IM.getTPSTuple(selectedTPS),regionStart,regionEnd)
 
 def loadData(main,export=True,gui=True):
 	updateSIILibPairs(main)
 	libPairs = main.IM.getSIIPairs()	#[(libPos,libNeg,label,TPS)]
 	#print(f"[siI GUI] LibPairs: {libPairs}")
-	return loadDataIntoGUI(main,libPairs,export=export,gui=gui)
+	#main.PM.get("siI-siRNAlength")
+	#main.PM.get("siI-strand")
+	params = main.PM.getDict(tag="siI")
+	print(f"\n{params}\n")
+	return loadDataIntoGUI(main,libPairs,params,export=export,gui=gui)
 
 def deleteLibIDPair(main,index):
 	print(f"[siI GUI] Deleting libID-pair {index}: {main.pairList[index][4].get()}")
@@ -58,7 +64,11 @@ def addLibToPair(main,libID,pair,isControl,parentWidget,libVar=None):
 	ThemedButton(container,image=main.xImage,
 		command = lambda libID=libID,pair=pair,isControl=isControl:deleteLibFromPair(libID,pair,isControl),style="Exit.TButton").pack(side="right",anchor="ne")
 
-def updatePairLibSelection(main,pair,availableLibIDs,positiveLibsFrame,negativeLibsFrame):
+def updatePairLibSelection(main,pair,selectedTPS,positiveLibsFrame,negativeLibsFrame,startVar,endVar):
+	if not main.IM.hasTPS(selectedTPS):return
+	availableLibIDs = main.IM.getTPSLibIDs(selectedTPS)
+	startVar.set(1)
+	endVar.set(main.IM.getTarget(main.IM.getTPSTuple(selectedTPS)[0]).mainLength)
 	for isControl in [0,1]:
 		for libID in pair[isControl].keys():
 			pair[isControl][libID].destroy()
@@ -82,8 +92,6 @@ def updatePairLibSelection(main,pair,availableLibIDs,positiveLibsFrame,negativeL
 		main.styleman.registredOptionMenuButtons.append(mm2)
 		mm2.config(bg=main.styleman.buttonColour,fg=main.styleman.buttonTextColour,font=main.buttonTextFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.buttonHighlightColour)
 		mm2["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	
-	pass
 
 def addPair(main,pairLoad=None,updateView=True):
 	TPSlist = main.IM.getTPSList()
@@ -91,8 +99,12 @@ def addPair(main,pairLoad=None,updateView=True):
 		main.writeError("Error, please run the pipeline befor selecting siI pairs.")
 		return
 	#print(f"[siI GUI] Adding pair: {pairLoad}")
-	pairFrame = ThemedFrame(main.pairListFrame)
-	main.pairListFrame.pairChildren.append(pairFrame)
+	pairFrameBase = ThemedFrame(main.pairListFrame,style="wBorder.TFrame")
+	main.pairListFrame.pairChildren.append(pairFrameBase)
+	pairFrameBase.pack(fill="x",side="top",padx=main.frameBorderSize,pady=(main.frameBorderSize,0))
+	
+	pairFrame = ThemedFrame(pairFrameBase)
+	pairFrame.pack(fill="x",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
 	pair = [dict(),dict()]
 	
@@ -106,34 +118,35 @@ def addPair(main,pairLoad=None,updateView=True):
 	ThemedLabel(pairFrame,text="Target:",style="TLabel").grid(column=0,row=1,columnspan=1,sticky="news",padx=(main.frameBorderSize,0))
 	
 	positiveLibsFrame = ThemedFrame(pairFrame,style="TFrame")
-	positiveLibsFrame.grid(column=2,row=1,rowspan=2,sticky="new",padx=(main.frameBorderSize*2,main.frameBorderSize))
+	positiveLibsFrame.grid(column=2,row=1,rowspan=4,sticky="new",padx=(main.frameBorderSize*2,main.frameBorderSize))
 	negativeLibsFrame = ThemedFrame(pairFrame)
-	negativeLibsFrame.grid(column=3,row=1,rowspan=2,sticky="new",padx=(main.frameBorderSize,main.frameBorderSize*2))
+	negativeLibsFrame.grid(column=3,row=1,rowspan=4,sticky="new",padx=(main.frameBorderSize,main.frameBorderSize*2))
+	
+	startVar = StringVar(value="-")
+	endVar = StringVar(value="-")
 	
 	select_TPS_var = StringVar(value="-")
-	select_TPS = OptionMenu(pairFrame,select_TPS_var,*TPSlist,command = lambda selectedTPS,main=main,pair=pair:updatePairLibSelection(main,pair,main.IM.getTPSLibIDs(selectedTPS),positiveLibsFrame,negativeLibsFrame))
+	select_TPS = OptionMenu(pairFrame,select_TPS_var,*TPSlist,command = lambda selectedTPS,main=main,pair=pair,startVar=startVar,endVar=endVar:
+		updatePairLibSelection(main,pair,selectedTPS,positiveLibsFrame,negativeLibsFrame,startVar,endVar))
 	select_TPS.grid(column=1,row=1,columnspan=1,sticky="news")
 	main.styleman.registredOptionMenus.append(select_TPS)
 	select_TPS.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 	select_TPS["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	ThemedFrame(pairFrame,style="TFrame").grid(column=0,row=2,columnspan=2,sticky="news")
 	
-	#TODO unused right now
-	startVar = StringVar(value="1")	#validate when adding pair ~ and add start-end into IM
-	#startVar.set("1")
-	#if not start is None:startVar.set(start)	#use pair
-	#ThemedEntry(pairFrame,textvariable=startVar,width=main.numberEntryWidth).grid(column=2,row=1,sticky="new")
-	endVar = StringVar(value="1000")
-	#endVar.set(str(basegui.targetLenVar.get()))	#set target per pairs (implicitely ? or explicitly? )
-	#if not end is None:endVar.set(end)
-	#ThemedEntry(pairFrame,textvariable=endVar,width=main.numberEntryWidth).grid(column=3,row=1,sticky="new")
+	ThemedLabel(pairFrame,text="Region-start:",style="TLabel").grid(column=0,row=2,sticky="news",padx=(main.frameBorderSize,0))
+	ThemedEntry(pairFrame,textvariable=startVar,width=10).grid(column=1,row=2,sticky="w")
+	ThemedLabel(pairFrame,text="Region-end:",style="TLabel").grid(column=0,row=3,sticky="news",padx=(main.frameBorderSize,0))
+	ThemedEntry(pairFrame,textvariable=endVar,width=10).grid(column=1,row=3,sticky="w")
+	ThemedFrame(pairFrame,style="TFrame").grid(column=0,row=4,columnspan=2,sticky="news")
 	
 	ThemedButton(pairFrame,image=main.xImage_small,command = lambda main=main,i = len(main.pairList): deleteLibIDPair(main,i),style="Exit.TButton").grid(column=4,row=0,rowspan=2,sticky="new",padx=(0,main.frameBorderSize*2),pady=main.frameBorderSize*2)
 	
 	
 	pairFrame.rowconfigure(0,weight=0,uniform="fred")
 	pairFrame.rowconfigure(1,weight=0,uniform="fred")
-	pairFrame.rowconfigure(2,weight=1)
+	pairFrame.rowconfigure(2,weight=0,uniform="fred")
+	pairFrame.rowconfigure(3,weight=0,uniform="fred")
+	pairFrame.rowconfigure(4,weight=1)
 	
 	pairFrame.columnconfigure(0,weight=1)
 	pairFrame.columnconfigure(1,weight=3)
@@ -141,8 +154,7 @@ def addPair(main,pairLoad=None,updateView=True):
 	pairFrame.columnconfigure(3,weight=4,uniform="fred")
 	pairFrame.columnconfigure(4,weight=0)
 	
-	pairFrame.pack(fill="x",side="top",padx=main.frameBorderSize*2,pady=main.frameBorderSize)
-	main.pairList.append([pairFrame,pair,startVar,endVar,labelVar,select_TPS_var])	#frame to delete from gui, vars to build graphs; when deleted is set to None
+	main.pairList.append([pairFrameBase,pair,startVar,endVar,labelVar,select_TPS_var])	#frame to delete from gui, vars to build graphs; when deleted is set to None
 	
 	if not pairLoad is None:
 		if len(pairLoad)>2:
@@ -150,7 +162,10 @@ def addPair(main,pairLoad=None,updateView=True):
 		if len(pairLoad)>3:
 			selectedTPS = main.IM.TPSToString(pairLoad[3])
 			select_TPS_var.set(selectedTPS)
-			updatePairLibSelection(main,pair,main.IM.getTPSLibIDs(selectedTPS),positiveLibsFrame,negativeLibsFrame)
+			updatePairLibSelection(main,pair,selectedTPS,positiveLibsFrame,negativeLibsFrame,startVar,endVar)
+		if len(pairLoad)>4:	#(libPos,libNeg,label,TPS,regionStart,regionEnd)
+			if pairLoad[4]!= "-": startVar.set(int(pairLoad[4]))
+			if pairLoad[5]!= "-": endVar.set(int(pairLoad[5]))
 		for isControl in [0,1]:
 			for libID in pairLoad[isControl]:
 				if not isControl:addLibToPair(main,libID,pair,isControl,positiveLibsFrame)
@@ -165,26 +180,48 @@ def add_siI_eval_GUI(main):
 	main.mainNotebooktabs[notebookIndex] = siIEvalFrame
 	
 	ThemedLabel(siIEvalFrame,text="siRNA candidate identification",anchor="w",style="Header.TLabel"
-		).grid(row=0,column=0,columnspan=3,sticky="news",padx=main.frameBorderSize*2,pady=(main.frameBorderSize*2,main.frameBorderSize))
-	pairingFrame = ThemedFrame(siIEvalFrame)
-	pairingFrame.grid(row=1,column=0,columnspan=3,sticky="news",padx=main.frameBorderSize*2,pady=(main.frameBorderSize,main.frameBorderSize*2))
+		).grid(row=0,column=0,columnspan=2,sticky="news",padx=main.frameBorderSize*2,pady=(main.frameBorderSize*2,main.frameBorderSize))
 	
-	siIEvalFrame.columnconfigure(0,weight=1,uniform="fred")
-	siIEvalFrame.columnconfigure(1,weight=1,uniform="fred")
-	siIEvalFrame.columnconfigure(2,weight=1,uniform="fred")
+	siIEvalFrame.columnconfigure(0,weight=0)
+	siIEvalFrame.columnconfigure(1,weight=1)
 	siIEvalFrame.rowconfigure(0,weight=0)
 	siIEvalFrame.rowconfigure(1,weight=1)
 	
+	# ------------------- siI settings -----------------------
+	settingsFrame = ThemedFrame(siIEvalFrame)
+	settingsFrame.grid(row=1,column=0,columnspan=1,sticky="news",padx=(main.frameBorderSize*2,0),pady=(main.frameBorderSize,main.frameBorderSize*2))
+	settingsFrame.columnconfigure(0,weight=1,uniform="fred")
+	settingsFrame.columnconfigure(1,weight=1,uniform="fred")
+	settingsFrame.columnconfigure(2,weight=1,uniform="fred")
+	settingsFrame.rowconfigure(0,weight=0)
+	settingsFrame.rowconfigure(1,weight=0,uniform="fred")
+	settingsFrame.rowconfigure(2,weight=0,uniform="fred")
+	settingsFrame.rowconfigure(3,weight=0,uniform="fred")
+	ThemedLabel(settingsFrame,text="Settings",anchor="nw",style="Medium.TLabel").grid(row=0,column=0,columnspan=2,sticky="news")
+	
+	ThemedLabel(settingsFrame,text="siRNA length:",anchor="w").grid(column=0,row=1,columnspan=2,sticky="w",padx=main.frameBorderSize)
+	ThemedEntry(settingsFrame,textvariable=main.PM.add("siI-siRNAlength","int",21,
+		"siRNA length needs to be an integer!","Length of reads to analyse",tag="siI"),width=6).grid(column=2,row=1,sticky="ew",padx=main.frameBorderSize)
+	ThemedLabel(settingsFrame,text="Strand:",anchor="w").grid(column=0,row=2,columnspan=3,sticky="w",padx=main.frameBorderSize)
+	strandVar = main.PM.add("siI-strand","text","reverse","siRNA length needs to be an integer!","Length of reads to analyse",tag="siI")
+	ThemedRadioButton(settingsFrame,text="Forward",variable=strandVar,value="forward").grid(column=0,row=3,sticky="ew",padx=main.frameBorderSize)
+	ThemedRadioButton(settingsFrame,text="Reverse",variable=strandVar,value="reverse").grid(column=1,row=3,sticky="ew",padx=main.frameBorderSize)
+	ThemedRadioButton(settingsFrame,text="Both",variable=strandVar,value="both",state="disabled").grid(column=2,row=3,sticky="ew",padx=main.frameBorderSize)
+	
 	# ------------------- Library Pairing -----------------------
+	pairingFrame = ThemedFrame(siIEvalFrame)
+	pairingFrame.grid(row=1,column=1,sticky="news",padx=main.frameBorderSize*2,pady=(main.frameBorderSize,main.frameBorderSize*2))
 	ThemedLabel(pairingFrame,text="Select pairs of libraries",anchor="nw",style="Medium.TLabel").pack(fill="x",anchor="nw")
 	main.pairList = list()
-	pairingBufferFrame = ThemedFrame(pairingFrame,style="wBorder.TFrame")
-	pairingBufferFrame.pack(fill="x",side="top",pady=main.frameBorderSize)
-	main.pairListFrame = ThemedFrame(pairingBufferFrame,style="wBorder.TFrame")
+	
+	pairListFrameBase = ScrollableFrame(pairingFrame,style="TFrame")
+	pairListFrameBase.pack(fill="both",side="top",pady=main.frameBorderSize,expand=True)
+	main.pairListFrame = pairListFrameBase.getInnerFrame()
+	pairListFrameBase.setCanvasBG(main.styleman.backgroundColour)
+	main.styleman.registredBG.append(pairListFrameBase)
+	
 	main.pairListFrame.pairChildren = list()
 	
 	ThemedButton(main.pairListFrame,text="+",command = lambda main=main: 
-		addPair(main),style="TButton").pack(fill="x",side="bottom",padx=main.frameBorderSize*2,pady=main.frameBorderSize)
-	
-	main.pairListFrame.pack(fill="x",side="top",pady=main.frameBorderSize)
+		addPair(main),style="TButton").pack(fill="x",side="bottom",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	

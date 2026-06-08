@@ -1,3 +1,4 @@
+from math import log10,ceil
 
 from tkinter import Canvas	#functions of this object are called in these functions, but no canvas is created here
 #Monkey-patching these functions in so that the SVG class can just create a cricle insteat of ellipses
@@ -157,6 +158,7 @@ def canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,continous=Tru
 	canvas.open_group()
 	font="System "+str(fontsize)
 	#requires either: continous=True and startv,endv,by OR continous=False and breaks
+	#print(f"[Debug][DrawAxisX] Start: {startv}, End: {endv}, By: {by}")
 	if continous:
 		x1=x_xaxisStart
 		y1=y_xaxisStart+axisspacer
@@ -194,6 +196,7 @@ def canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,continous=Tru
 def canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,continous=True,startv=None,endv=None,by=None,linewidth=2,yaxisBuffer=20,lineColour="black",fontsize=10):
 	#requires either: continous=True and startv,endv,by
 	if not continous:return	#TODO
+	#print(f"[Debug][DrawAxisY] Start: {startv}, End: {endv}, By: {by}")
 	canvas.open_group()
 	x1=x_yaxisStart -axisspacer
 	y1=y_yaxisStart
@@ -276,6 +279,8 @@ def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_da
 	
 	graph.xbase = x_dataStart
 	graph.yzero = yzero
+	graph.y_dataStart = y_dataStart
+	graph.y_dataSpace = y_dataSpace
 	graph.xdataToPix = xdataToPix
 	graph.ydataToPix = ydataToPix
 	
@@ -421,6 +426,7 @@ def canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y
 
 def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colourscale=None,width=None,height=None,scaleFactor=1,fontMultiplier=1.0,
 			xlabel=None,ylabel=None,legend=None,x_canvasOffset=0,y_canvasOffset=0,drawBorder=False):
+	
 	canvas.open_group()
 	#TODO get dict of parametes instead of graph !
 	#TODO cleanup here !
@@ -431,11 +437,11 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 		canvas.create_rectangle(x_canvasOffset,y_canvasOffset,x_canvasOffset+width,y_canvasOffset+height,outline="#000000",width=2,fill="#ffffff")
 	
 	if graphType is None:graphType = graph.graphType
-	
 	#print(f"[Draw] Drawing {graphType}")
 	
 	if width is None:width = graph.width	#space allowed on canvas from offset
 	if height is None:height = graph.height
+	#print(f"[Debug][PLot] {graphType}")	#TODO clean up later
 	
 	#--------------------------------- Graph bounds ---------------------------------
 	titleBuffer=0
@@ -496,42 +502,44 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 	#print("graph-Y: "+str(graph.ybins)+" "+str(graph.ystep)+" "+str(graph.ydataToPix))
 	
 	discreetX = False
+	x_startV = None
+	x_endV = None
 	if not graphType=="HEAT":
 		if graphType=="SCATTER":
-			maxx1 = max([point[1] for point in data])
-			minx1 = min([point[1] for point in data])
-			if minx1>=0:xbreaks,xstep = getAxisScale(maxx1,minValue=minx1)
-			else:xbreaks,xstep = getAxisScale2(maxx1,abs(minx1))
+			maxx = max([point[1] for point in data])
+			minx = min([point[1] for point in data])
+			maxy = max([point[2] for point in data])
+			miny = abs(min([point[2] for point in data]))
 		else:
-			maxx1 = max([point[0] for point in data])
-			minx1 = min([point[0] for point in data])
-			xbreaks,xstep = getAxisScale(maxx1,minValue=minx1)
+			maxx = max([point[0] for point in data])
+			minx = min([point[0] for point in data])
+			maxy = max([max([point[i] for i in range(1,len(point),2)]) for point in data])
+			miny =-max([max([point[i] for i in range(2,len(point),2)]) for point in data]) if len(data[0])>2 else 0
 		
-		if graphType=="SCATTER":
-			maxy1 = max([point[2] for point in data])
-			miny1 = abs(min([point[2] for point in data]))
-			ybreaks,ystep = getAxisScale(maxy1,minValue=miny1)
-			maxy2=miny1
-		else:
-			maxy1 = max([max([point[i] for i in range(1,len(point),2)]) for point in data])
-			maxy2 = 0
-			if len(data[0])>2:
-				maxy2 = max([max([point[i] for i in range(2,len(point),2)]) for point in data])
-			ybreaks,ystep = getAxisScale2(maxy1,maxy2)
-	
+		x_startV,x_endV,xstep = getAxisScale3(maxx,minValue=minx)
+		y_startV,y_endV,ystep = getAxisScale3(maxy,minValue=miny)
+		
 		if len(data)<50:
 			discreetX = True
 	graph.discreetX = discreetX
 	if graphType=="SCATTER":
-		if minx1>0:
-			xmin = int(minx1/xstep)
-			xmax = xmin + xstep * xbreaks
+		if x_startV is None:
+			if minx1>0:
+				xmin = int(minx1/xstep)
+				xmax = xmin + xstep * xbreaks
+			else:
+				xmax = xstep * xbreaks[0]
+				xmin = -xstep * xbreaks[1]
 		else:
-			xmax = xstep * xbreaks[0]
-			xmin = -xstep * xbreaks[1]
+			xmin = x_startV
+			xmax = x_endV
 		#print(str(xmin)+" - "+str(xmax))
-		ymin = int(miny1/xstep)
-		ymax = ymin + ystep * ybreaks
+		#ymin = int(miny1/xstep)
+		#ymax = ymin + ystep * ybreaks
+		
+		ymin = y_startV
+		ymax = y_endV
+		
 	elif graphType=="HEAT":	#TODO for selections of the sequence??
 		xmin = 0
 		xmax = xmin + graph.xstep * graph.xbins
@@ -541,15 +549,21 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 		#print(graph.yvals)
 		ystep = 1
 	else:
-		if discreetX:
-			xmin = minx1
-			xmax = maxx1
+		if x_startV is None:
+			if discreetX:
+				xmin = minx1
+				xmax = maxx1
+			else:
+				xmin = int(minx1/xstep)
+				xmax = xmin + xstep * xbreaks
 		else:
-			xmin = int(minx1/xstep)
-			xmax = xmin + xstep * xbreaks
+			xmin = x_startV
+			xmax = x_endV
 		
-		ymax = ystep * ybreaks[0]
-		ymin = -ystep * ybreaks[1]
+		#ymax = ystep * ybreaks[0]
+		#ymin = -ystep * ybreaks[1]
+		ymin = y_startV
+		ymax = y_endV
 	
 	#print("Proper Xdef: "+str(xmin)+" "+str(xmax)+" "+str(xstep))
 	#print("Proper Ydef: "+str(ymin)+" "+str(ymax)+" "+str(ystep))
@@ -637,10 +651,12 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 
 def createBarHighlight(graph,pos):	#Used to create a highlight border around bars
 	x = graph.xbase+pos*graph.xdataToPix
-	y = graph.ybase
-	h = graph.ybins*graph.ystep*graph.ydataToPix
+	#y = graph.ybase
+	y1 = graph.y_dataStart
+	y2 = graph.y_dataSpace
+	#h = graph.ybins*graph.ystep*graph.ydataToPix
 	r = graph.barRadius+2.5
-	barHighlight = graph.canvas.create_rectangle(x-r,y, x+r,y-h, fill="",width=5,outline="#ff00c6")#ff5700")#"#ff00c6")#"#00ffff")	#ff7700
+	barHighlight = graph.canvas.create_rectangle(x-r,y1, x+r,y2, fill="",width=5,outline="#ff00c6")#ff5700")#"#ff00c6")#"#00ffff")	#ff7700
 	return barHighlight
 
 def getColour(value,colourscale):
@@ -713,6 +729,7 @@ def getAxisScale(maxValue,minValue=1):
 			best_breaks = nbreaks
 			best_step = stepSize
 	if best_breaks==-1 or best_step==-1: print(f"[GraphLib] Error no stepsize found for {maxValue} {minValue}")
+	#print(f"[Debug][AxisScale] Steps for {minValue}-{maxValue}: {best_step}x{best_breaks}")
 	return best_breaks,best_step
 
 def getAxisScale2(maxValue1,maxValue2):
@@ -731,5 +748,49 @@ def getAxisScale2(maxValue1,maxValue2):
 			best_nbreaks = nbreaks
 			best_step = stepSize
 			best_breaks = (int(abs(maxValue1)/stepSize)+1,0 if maxValue2==0 else int(abs(maxValue2)/stepSize)+1)
+	#print(f"[Debug][AxisScale2] Steps for {maxValue1}-{maxValue2}: {best_step}x{best_breaks}")
 	return best_breaks,best_step
 
+
+def getAxisScale3(maxValue,minValue=0):	#returns start,end,by	#start can be negative
+	if minValue>maxValue: return None,None
+	allowedStepBase = [50,10,20]
+	targetbreaks = 9
+	valueRange = maxValue-minValue
+	if valueRange==0:
+		valueRange=1
+		maxValue+=1
+	valueStr = str(valueRange)
+	#ndigits = len(valueStr)
+	ndigits = ceil(log10(valueRange))
+	#fstDigit = valueStr[:1]
+	#otDigits = int(valueStr[:2])
+	allowedBorders = [1,2,5]
+	marks = list()
+	for i in [-2,-1]:
+		for v in allowedBorders:
+			marks.append(v * 10**(ndigits+i))
+	#print(f"[Debug][AxisScale3] {minValue}-{maxValue}: {valueRange}, {marks}")
+	
+	best_minValue = None
+	best_maxValue = None
+	best_stepsize = None
+	best_nBreaks = 0
+	
+	for stepSize in marks:
+		if minValue==0:
+			current_minValue = 0
+		else:
+			current_minValue = int(stepSize * (int(minValue / stepSize)-(1 if minValue<0 else 0) ))
+		current_maxValue = int(stepSize * (int(maxValue / stepSize) + (0 if maxValue % stepSize == 0 else 1)))
+		
+		nBreaks = (current_maxValue-current_minValue)/stepSize +1
+		
+		if abs(nBreaks-targetbreaks) < abs(best_nBreaks-targetbreaks):
+			best_minValue = current_minValue
+			best_maxValue = current_maxValue
+			best_stepsize = stepSize
+			best_nBreaks = nBreaks
+		
+	#print(f"[Debug][AxisScale3] BEST: {minValue}-{maxValue}: {best_minValue}-{best_maxValue}, {best_stepsize}")
+	return best_minValue,best_maxValue,best_stepsize

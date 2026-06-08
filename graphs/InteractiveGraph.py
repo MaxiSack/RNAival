@@ -220,15 +220,15 @@ class InteractiveGraph:
 			point = self.graphData[pos]
 			self.myGraphStats.set(f"Position: {point[0]}, {self.xlab}: {point[1]}, {self.ylab}: {point[2]}")
 			self.canvas.itemconfig(self.points[pos][0],outline="#ff00c6")#"#ff5700")#"#ff00c6")#"#d800df")#"#00ffff")	#ff7700
-		elif self.graphType=="BAR":
+		elif self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
 			point = self.graphData[pos]
 			self.myGraphStats.set(f"{self.xlab}: {point[0]}, {self.ylab}: {point[1]}")
-			self.barhighlights[pos] = graphLib.createBarHighlight(self,pos)
+			self.barhighlights[pos] = graphLib.createBarHighlight(self,pos+1)
 	
 	def clearPoint(self,pos):
 		if self.graphType=="SCATTER":
 			self.canvas.itemconfig(self.points[pos][0],outline="")
-		elif self.graphType=="BAR":
+		elif self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
 			self.canvas.delete(self.barhighlights[pos])
 	
 	def selectPointInAll(self,pos):	#this is actually an index for the datastructure
@@ -263,7 +263,7 @@ class InteractiveGraph:
 			yindex = int(ypoint / self.ydataToPix)
 			#print(f"\n[IG][Debug] Selected Position(index): {barIndex} {yindex} {round(event.y,2)} / {round(self.ybase)} {round(self.yzero)} {ypoint}")
 			if barIndex<len(self.graphData):
-				if self.graphType=="BAR":
+				if self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
 					self.selectPointInAll(barIndex)
 				else:
 					self.updateDesc(barIndex,yindex,ypoint)

@@ -156,10 +156,18 @@ class InputManager():
 				if not sTPS in self.availableTPS:self.availableTPS[sTPS] = [TPS,set()]
 				self.availableTPS[sTPS][1].add(lib.libID)
 		return sorted(self.availableTPS.keys())
+	def hasTPS(self,selectedTPS):
+		return selectedTPS in self.availableTPS
 	def getTPSLibIDs(self,selectedTPS):
+		#if selectedTPS not in self.availableTPS:
+		#	print(f"[ERROR][IM] selectedTPS \"{selectedTPS}\" not in availableTPS: {self.availableTPS}")
+		#	return []
 		return sorted(self.availableTPS[selectedTPS][1])
-	def getTPSTuple(self,sTPS):
-		return self.availableTPS[sTPS][0]
+	def getTPSTuple(self,selectedTPS):
+		#if selectedTPS not in self.availableTPS:
+		#	print(f"[ERROR][IM] selectedTPS \"{selectedTPS}\" not in availableTPS: {self.availableTPS}")
+		#	return None
+		return self.availableTPS[selectedTPS][0]
 	def TPSToString(self,TPS):
 		bundleID,psname = TPS
 		return f"{bundleID} + {psname}"
@@ -205,9 +213,9 @@ class InputManager():
 	def removeEvalType(self,libID,evalType):
 		self.libDict[libID].evalTypes.remove(evalType)
 	
-	def addSIIPair(self,libPos,libNeg,label,TPS):
-		print(f"Adding siIPair {(libPos,libNeg,label,TPS)}")
-		self.siiPairs.append((libPos,libNeg,label,TPS))
+	def addSIIPair(self,libPos,libNeg,label,TPS,regionStart,regionEnd):
+		print(f"Adding siIPair {(libPos,libNeg,label,TPS,regionStart,regionEnd)}")
+		self.siiPairs.append((libPos,libNeg,label,TPS,regionStart,regionEnd))
 	def getSIIPairs(self):
 		return self.siiPairs
 	def removeSIIPair(self,index):
