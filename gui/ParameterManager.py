@@ -2,10 +2,11 @@ import json
 import os
 import os.path
 from pathlib import Path
+from tkinter import BooleanVar
 from tkinter import StringVar
 
-trueList = ["true","t","yes","y",1,"1"]	#lowercase inputs accepted for True
-falseList = ["false","f","no","y",0,"0"]	#lowercase inputs accepted for False (used for validation)
+trueList = [True,"true","t","yes","y",1,"1"]	#lowercase inputs accepted for True
+falseList = [False,"false","f","no","y",0,"0"]	#lowercase inputs accepted for False (used for validation)
 
 nucset={"A","C","G","T","U","N"}
 idset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","_","-"}
@@ -128,7 +129,7 @@ class ParameterManager():
 	
 	def add(self,name,vartype,default,errormessage,desc,tags=None,tag=None):
 		if name in self.parameterDict:return self.parameterDict[name][0]
-		self.parameterDict[name]=[StringVar(value=default),vartype,default,errormessage,desc]
+		self.parameterDict[name]=[BooleanVar(value=default) if vartype=="bool" else StringVar(value=default),vartype,default,errormessage,desc]
 		if tags is None and not tag is None:
 			tags = [tag]
 		if not tags is None:
@@ -164,10 +165,16 @@ class ParameterManager():
 					return [int(v.strip()) for v in value.split(",") if v!=""]
 				except:
 					return list()
-		elif vardesc[1]=="bool": 
-			return value.lower() in trueList
+		elif vardesc[1]=="bool":
+			#return value.lower() in trueList
+			return value
 		
 		return value
+	
+	def printVarsOfType(self,vartype):
+		for key,vardesc in self.parameterDict.items():
+			if vardesc[1]=="bool":
+				print(f"[PM] {key}: {vardesc[0].get()} {vardesc}")
 	
 	def reset(self,tags=None,tag=None,notTags=None):
 		if notTags is None:
@@ -245,8 +252,9 @@ class ParameterManager():
 			except:
 				error=True
 		elif vartype=="bool":
-			if not (value.lower() in trueList or value.lower() in falseList):
-				error=True
+			#if not (value.lower() in trueList or value.lower() in falseList):
+			#	error=True
+			pass
 		elif vartype=="nuc":
 			for char in value.upper():
 				if not char in nucset:

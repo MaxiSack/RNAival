@@ -16,6 +16,13 @@ def showGraphs(main,fontMultiplier=1.0):
 		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
 		Path(resultDir).mkdir(parents=True, exist_ok=True)
 		graph.generateIGs(main,resultDir)
+	
+	for graph in main.comboGraphs.values():	#reset the selected tab back to the first one
+		if graph.isScrollGraph:graph.parentnotebook.finish()
+	main.outputGraphicsNotebook.select(0)
+	
+	#TODO seperate into re-draw function with other settings to re-apply
+	for graph in main.comboGraphs.values():
 		graph.drawOntoGui(fontMultiplier=fontMultiplier)
 	return True
 
@@ -41,7 +48,7 @@ def setStyles(main,highlightStyles):
 
 def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	doPercent=graphDef["percent"]
-	graphtype="lengths"+("_percent" if doPercent else "")
+	graphtype="Length-Distribution"+("_percent" if doPercent else "")
 	graphList = list()
 	highlighting = [dict(),dict()]
 	minL=graphDef["minL"]
@@ -75,7 +82,7 @@ def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	legend=("Strand:",[(cols[i],label) for i,label in enumerate(legendLabels)])
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
-	graph.addData(graphList)
+	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
@@ -144,7 +151,7 @@ def addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=None,highligh
 	#print("")
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
-	if len(graphList)>0:graph.addData(graphList)
+	if len(graphList)>0:graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	#print("\nXlabels:")
 	#print(xLabels)
 	graph.bundleID=graphDef["bundleID"]
@@ -197,7 +204,7 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 		legend=None
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
-	graph.addData(graphList)
+	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
@@ -266,7 +273,7 @@ def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=No
 		legend=("Coverage:",[("black",str(targetLen)+"nt reads")])
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
-	graph.addData(graphList)
+	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
@@ -295,7 +302,7 @@ def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 	lineColours = [graphDef["targets"][int(i/2)][1] for i in range(len(targetLengths)*2)]
 	if "hideLegend" in graphDef:legend=None
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="multiLine",legend=legend,xlab=graphDef["xlab"],ylab=graphDef["ylab"],lineColours=lineColours)
-	graph.addData(graphList)
+	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
@@ -306,7 +313,7 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 	graphList = list()
 	for libID in libIDs:
 		coverage = [[i,0,0,0,0] for i in range(1,db.seqLen+1)]	#per position
-		for targetLen in range(15,30):	#TODO use parameters
+		for targetLen in range(15,30):	# use parameters for this # is not use anymore / right now
 			for spos in range(1,db.seqLen+1):
 				if db.getReadCount(libID,0,targetLen,spos)>0:
 					for cpos in range(spos,spos+targetLen):
@@ -318,7 +325,7 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 		graphList.append((libID,coverage))
 		#print(coverage)
 	graph = Combograph(main,graphtype,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",xlab=graphDef["xlab"],ylab=graphDef["ylab"])
-	graph.addData(graphList)
+	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
@@ -370,7 +377,7 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 		positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"])
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
-	graph.addData(graphList,colourscale=colourscale_define,globalYScale=True)
+	graph.addData(graphList,colourscale_define=colourscale_define)
 	main.comboGraphs[graphtype+graphDef["bundleID"]+graphDef["psname"]] = graph
 
 def loadCounts(main,countFile,libIDs,seqLen):

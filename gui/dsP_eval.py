@@ -166,6 +166,10 @@ def getWantedgraphs(main):
 			graphDef["ylab"] = None
 			graphDef["hideLegend"] = True
 	
+	globalYScale =  main.PM.get("globalYScale")
+	for graphDef in wantedgraphs:
+		graphDef["globalYScale"] = globalYScale
+	
 	return wantedgraphs
 
 def loadData(main,export=True,gui=True):
@@ -417,7 +421,6 @@ def add_dsP_eval_GUI(main):
 	heatmapOptionsFrame.rowconfigure(5,weight=1,uniform="fred")
 	heatmapOptionsFrame.rowconfigure(6,weight=1,uniform="fred")
 	
-	
 	# ------------------- colour Overrides -------------------
 	colourTotalFrame,colourOptionsFrame,colourOptionsID = makeParameterToggleFrame(main,outputFoldOutFrame3,"Colours")
 	colourTotalFrame.pack(fill="both")
@@ -446,6 +449,13 @@ def add_dsP_eval_GUI(main):
 	ThemedLabel(hideLLFrame,text="Hide Labels and Legends",anchor="w").grid(column=0,row=0,columnspan=3,sticky="ew")
 	createTogglebutton(main,hideLLFrame,addGraphicVar(main,"hideLabelsLegends",BooleanVar(),"bool",False,
 		"","")).grid(column=3,row=0,sticky="e")
+	
+	ThemedLabel(hideLLFrame,text="Synchronise Y-Axes between graphs",anchor="w").grid(column=0,row=1,columnspan=3,sticky="ew")
+	createTogglebutton(main,hideLLFrame,addGraphicVar(main,"globalYScale",BooleanVar(),"bool",False,
+		"","")).grid(column=3,row=1,sticky="e")
+	
+	hideLLFrame.rowconfigure(0,weight=1,uniform="fred")
+	hideLLFrame.rowconfigure(1,weight=1,uniform="fred")
 	hideLLFrame.columnconfigure(0,weight=1,uniform="fred")
 	hideLLFrame.columnconfigure(1,weight=1,uniform="fred")
 	hideLLFrame.columnconfigure(2,weight=1,uniform="fred")

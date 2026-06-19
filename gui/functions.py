@@ -21,6 +21,7 @@ import iostuff.seqFiles as seqIO
 from gui.inputSelection import updateSeqFiles,updateTargetListFrame,saveSeqFiles
 import gui.siI_eval as sig
 from gui.SettingsMenu import SettingsMenu
+from gui.ScrollableNotebook import ScrollableNotebook
 
 nucset={"A","C","G","T","U","N"}
 idset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","_","-"}
@@ -357,24 +358,24 @@ def makeParameterToggleFrame(main,parent,heading):	#only used by dsp_eval, but d
 	parameterFrame.pack(anchor="n",expand=True,fill="x",side="top")
 	return totalFrame,parameterFrame,wantGraphVar
 
-def addOutputGraphicsGroup(main,key):	#add new notebook for graphs with the same target/key to the graphicla output
-	#print(f"\n[Fun] Output Graphics Groups: {main.outputGroups}\n")
-	if not key in main.outputGroups:	#but dont overwrite existing; just add graphs to the notebook (that was created by another function)
-		#print(f"[Fun] New Key: {key}")
+def addOutputGraphicsGroup(main,key,isScrollGraph=True):	#add new notebook for graphs with the same target/key to the graphicla output
+	if not key in main.outputGroups:	#check if a group-notebook with that key already exists
+		#Add new Tab to Main Graphics Notebook with padding
 		paddingkeyBaseFrame = ThemedFrame(main.outputGraphicsNotebook,style="gBorder.TFrame")
 		main.outputGraphicsNotebook.add(paddingkeyBaseFrame,text=str(key),sticky="news")
-		keyBaseFrame = ThemedFrame(paddingkeyBaseFrame)#,style="TEST.TFrame")
-		keyBaseFrame.pack(fill="both",expand=True,pady=(main.frameBorderSize*2,0))	#Only pad top for visibility, rest has enough border already
-		#keyNotebook = Notebook(main.outputGraphicsNotebook)
-		#main.outputGraphicsNotebook.add(keyNotebook,text=str(key))
-		keyScrollbar = ThemedScrollbar(keyBaseFrame,orient="vertical",command=lambda *args, main=main,key=key:scrollGraphicsOutput(main,key,*args))
-		keyScrollbarCanvasList = list()	#TODO also add mouse wheel scrolling...	~figure out how that works with multiple windows....
-		keyScrollbar.pack(side="left",fill="y")
-		keyNotebook = Notebook(keyBaseFrame)
+		keyBaseFrame = ThemedFrame(paddingkeyBaseFrame)
+		keyBaseFrame.pack(fill="both",expand=True,pady=(main.frameBorderSize*2,0))
+		
+		if isScrollGraph:
+			keyNotebook = ScrollableNotebook(keyBaseFrame)
+		else:
+			keyNotebook = Notebook(keyBaseFrame)
 		keyNotebook.pack(side="left",fill="both",expand=True)
-		#new graphs added to [0], canvas for scrolling in those tabs listen to [1] and updated with [2]	#TODO there are some sync issues with unselected tabs....or not?
-		main.outputGroups[key] = [keyNotebook, keyScrollbar, keyScrollbarCanvasList]
-	return main.outputGroups[key]
+		keyNotebook_ID = len(main.outputGroups)
+		main.outputGroups[key] = (keyNotebook,keyNotebook_ID)
+	
+	main.outputGraphicsNotebook.select(main.outputGroups[key][1])	#select tab to prevent scrollbar issues
+	return main.outputGroups[key][0]	#return notebook
 
 def scrollGraphicsOutput(main,key,*args):
 	for canvas in main.outputGroups[key][2]:

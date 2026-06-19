@@ -17,7 +17,9 @@ Canvas.open_group = _open_group
 def _close_group(self):
 	pass
 Canvas.close_group = _close_group
-#TODO could also implement isSVG() function that returns False for canvas and True for my svg-canvas; maybe this could be helpfull...?
+def _isSVG(self):
+	return False
+Canvas.isSVG = _isSVG
 
 
 def svg_writeStyle(svg,name,fill,stroke,sw=1,cap="butt"):
@@ -51,6 +53,8 @@ class SVG_Canvas:	#TODO use grouping better, i.e. <g stroke-width=1>, <g width=3
 		self.width=width
 		self.height=height
 		self.styles = dict()
+	def isSVG(self):
+		return True
 	def set_styles(self,styleDefs):
 		for key,style in styleDefs.items():
 			self.styles[(style[0],style[1],style[2])] = key
@@ -135,67 +139,67 @@ def canvas_createLegend(canvas,x1,y1,x2,y2,legend,vertical=True,textcolour="blac
 	y1+=10
 	
 	legendColSize = int(26*fontMultiplier)	#Width/height of rectangle or diameter of circle
-	legendYStep = int(40*fontMultiplier)
+	legendaxis_y_step = int(40*fontMultiplier)
 	
 	canvas.create_text((x1,y1+legendColSize/2),text=str(legend[0]),anchor="w",fill=textcolour,font="System "+str(int(16*fontMultiplier)))
 	for i,(col,desc) in enumerate(legend[1]):
 		if desc == "esiRNAs":
 			canvas.create_rectangle(
-				x1, y1+(i+1)*legendYStep,
-				x1+legendColSize, y1+(i+1)*legendYStep+legendColSize,
+				x1, y1+(i+1)*legendaxis_y_step,
+				x1+legendColSize, y1+(i+1)*legendaxis_y_step+legendColSize,
 				outline=col,width=4*fontMultiplier)
 		else:
 			canvas.create_rectangle(
-				x1, y1+(i+1)*legendYStep,
-				x1+legendColSize, y1+(i+1)*legendYStep+legendColSize,
+				x1, y1+(i+1)*legendaxis_y_step,
+				x1+legendColSize, y1+(i+1)*legendaxis_y_step+legendColSize,
 				outline=col,fill=col)
 		canvas.create_text(
-			(x1+legendColSize+5,y1+(i+1)*legendYStep+0.5*legendColSize),
+			(x1+legendColSize+5,y1+(i+1)*legendaxis_y_step+0.5*legendColSize),
 			text=str(desc),anchor="w",fill=textcolour,font="System "+str(int(12*fontMultiplier)))
 	canvas.close_group()
 
-def canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,continous=True,startv=None,endv=None,by=None,breaks=None,linewidth=2,lineColour="black",fontsize=10):
+def canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,startv,endv,by,linewidth=2,lineColour="black",fontsize=10):
 	canvas.open_group()
 	font="System "+str(fontsize)
-	#requires either: continous=True and startv,endv,by OR continous=False and breaks
 	#print(f"[Debug][DrawAxisX] Start: {startv}, End: {endv}, By: {by}")
-	if continous:
-		x1=x_xaxisStart
-		y1=y_xaxisStart+axisspacer
-		x2=x_xaxisEnd
-		y2=y1
+	x1=x_xaxisStart
+	y1=y_xaxisStart+axisspacer
+	x2=x_xaxisEnd
+	y2=y1
+	canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
+	nbreaks=int((endv-startv)/by)+1
+	binwidth = (x_xaxisEnd-x_xaxisStart)/(nbreaks-1)
+	y2=y_xaxisStart+axisspacer+markerLength
+	for step in range(0,nbreaks):
+		x1=x_xaxisStart + binwidth*step
+		x2=x1
 		canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
-		
-		nbreaks=int((endv-startv)/by)+1
-		binwidth = (x_xaxisEnd-x_xaxisStart)/(nbreaks-1)
-		y2=y_xaxisStart+axisspacer+markerLength
-		for step in range(0,nbreaks):
-			x1=x_xaxisStart + binwidth*step
-			x2=x1
-			canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
-			xval = startv+by*step
-			#+linewidth*2 to get some space between the line and the text
-			canvas.create_text((x2,y2+linewidth),text=str(xval),anchor="n",fill=lineColour,font=font)
-	else:
-		nbreaks=len(breaks)
-		binwidth = (x_xaxisEnd-x_xaxisStart)/(nbreaks)
-		x1=x_xaxisStart + binwidth/2
-		y1=y_xaxisStart+axisspacer
-		x2=x_xaxisEnd - binwidth/2
-		y2=y1
+		xval = startv+by*step
+		#+linewidth*2 to get some space between the line and the text
+		canvas.create_text((x2,y2+linewidth),text=str(xval),anchor="n",fill=lineColour,font=font)
+	canvas.close_group()
+
+def canvas_createXAxis_breaks(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,breaks=None,linewidth=2,lineColour="black",fontsize=10):
+	canvas.open_group()
+	font="System "+str(fontsize)
+	#print(f"[Debug][DrawAxisX-breaks] Start: {startv}, End: {endv}, By: {by}")
+	nbreaks=len(breaks)
+	binwidth = (x_xaxisEnd-x_xaxisStart)/(nbreaks)
+	x1=x_xaxisStart + binwidth/2
+	y1=y_xaxisStart+axisspacer
+	x2=x_xaxisEnd - binwidth/2
+	y2=y1
+	canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
+	y2=y_xaxisStart+axisspacer+markerLength
+	for step in range(0,nbreaks):
+		x1=x_xaxisStart + binwidth/2 + binwidth*step
+		x2=x1
 		canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
-		y2=y_xaxisStart+axisspacer+markerLength
-		for step in range(0,nbreaks):
-			x1=x_xaxisStart + binwidth/2 + binwidth*step
-			x2=x1
-			canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
-			xval = breaks[step]
-			canvas.create_text((x2,y2+linewidth),text=str(xval),anchor="n",fill=lineColour,font=font)
+		xval = breaks[step]
+		canvas.create_text((x2,y2+linewidth),text=str(xval),anchor="n",fill=lineColour,font=font)
 	canvas.close_group()
 		
-def canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,continous=True,startv=None,endv=None,by=None,linewidth=2,yaxisBuffer=20,lineColour="black",fontsize=10):
-	#requires either: continous=True and startv,endv,by
-	if not continous:return	#TODO
+def canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=None,endv=None,by=None,linewidth=2,yaxisBuffer=20,lineColour="black",fontsize=10):
 	#print(f"[Debug][DrawAxisY] Start: {startv}, End: {endv}, By: {by}")
 	canvas.open_group()
 	x1=x_yaxisStart -axisspacer
@@ -203,24 +207,19 @@ def canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,continous=Tru
 	x2=x1
 	y2=y_yaxisEnd
 	canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
-	
 	font="System "+str(fontsize)
-	#print("YAxis: "+str(endv)+" - "+str(startv)+", "+str(by))
 	nbreaks=int((endv-startv)/by)+1
-	#print("Breaks: "+str(nbreaks))
 	binwidth = abs(y_yaxisStart-y_yaxisEnd)/(nbreaks-1)
-	#print("BinWidth: "+str(binwidth))
 	x1=x_yaxisStart -axisspacer -markerLength
 	for step in range(0,nbreaks):
 		y1=y_yaxisEnd - binwidth*step
 		y2=y1
 		canvas.create_line(x1,y1,x2,y2,fill=lineColour,width=linewidth,capstyle="projecting")
 		yval = startv+by*step
-		#print(f"[Draw] {yval} ~ {y1}")
 		canvas.create_text((x1-linewidth*2,y1),text=str(yval),anchor="e",fill=lineColour,font=font)
 	canvas.close_group()
 
-def canvas_createSplitYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=None,endv=None,by=None,linewidth=2,yaxisBuffer=20,lineColour="black",fontsize=10):
+def canvas_createSplitYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=None,endv=None,linewidth=2,yaxisBuffer=20,lineColour="black",fontsize=10):
 	canvas.open_group()
 	
 	font="System "+str(fontsize)
@@ -264,15 +263,10 @@ def canvas_createYLabel(canvas,y_yLabelCenter,x_yLabelStart,yLabelText,fontsize=
 	canvas.create_text((x_yLabelStart,y_yLabelCenter),text=str(yLabelText),anchor="s",fill=textcolour,font="System "+str(fontsize),angle=90)
 	
 def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,discreetX=False,barcolours=None,lineColour="black",defBarcol="black"):
-	#TODO boxBars is discreet vs continous x-axis!
 	#data = [x,+,-] or [x,+,-,+,-]
 	#first +,- is black/background, second is drawn ontop ~~~~
 	#colouring is same but colour insted of yvalue
-	#startv,endv ~ x_dataSpace
-	xdataToPix = x_dataSpace/(xmax-xmin+1)
-	#print(xmin,xmax,ymin,ymax)
-	#ymin=-graph.ybins[1]*graph.ystep
-	#ymax=graph.ybins[0]*graph.ystep
+	xdataToPix = x_dataSpace/(xmax-xmin+1) #startv,endv ~ x_dataSpace
 	ydataToPix = y_dataSpace/(ymax-ymin)
 	
 	yzero = y_dataStart + ymax * ydataToPix
@@ -290,27 +284,25 @@ def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_da
 	if barcolours is None:
 		barcolours = [[lineColour]*len(data[0])-1]*len(data)
 	
-	
 	bars = [None]*len(data)	#~~~
 	barwidth = max(2,xdataToPix)
-	barradius = max(1,xdataToPix/2)
+	graph.barradius = max(1,xdataToPix/2)
 	
 	styleDefs=dict()
 	styleDefs["b"] = (defBarcol,defBarcol,barwidth)
 	canvas.set_styles(styleDefs)
 	for i,point in enumerate(data):
-		xcenter = x_dataStart+(point[0]-xmin)*xdataToPix	#TODO offset !!	~startv ???
+		xcenter = x_dataStart+(point[0]-xmin)*xdataToPix
 		if discreetX:
 			xcenter+=xdataToPix/2
-			#print(str(point)+" "+str(xcenter))
 		posBars = [None]*(len(point)-1)
 		for j in range(len(point)-1,0,-1):
 			y1 = yzero - point[j] * ydataToPix * ((j%2)*2-1)
 			y2 = yzero
 			bar=None
 			if discreetX:
-				x1 = xcenter - barradius
-				x2 = xcenter + barradius
+				x1 = xcenter - graph.barradius
+				x2 = xcenter + graph.barradius
 				bar = canvas.create_rectangle(x1,y1,x2,y2,fill=barcolours[i][j-1][0],outline=barcolours[i][j-1][1])
 			else:
 				x1 = xcenter
@@ -321,23 +313,10 @@ def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_da
 	return bars
 
 def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,linewidth=2,lineColours=None,discreetX=False):
-	#data = [x,+,-] or [x,+,-,+,-]
-	#first +,- is black/background, second is drawn ontop ~~~~
-	#colouring is same but colour insted of yvalue
-	#startv,endv ~ x_dataSpace
 	xdataToPix = x_dataSpace/(xmax-xmin+1)
-	#print("Bounds:")
-	#print(xmin,xmax,ymin,ymax)
-	#ymin=-graph.ybins[1]*graph.ystep
-	#ymax=graph.ybins[0]*graph.ystep
 	ydataToPix = y_dataSpace/(ymax-ymin)
 	
 	yzero = y_dataStart + ymax * ydataToPix
-	
-	#graph.xbase = x_dataStart
-	#graph.yzero = yzero
-	#graph.xdataToPix = xdataToPix
-	#graph.ydataToPix = ydataToPix
 	
 	if ymin<0:
 		canvas.create_line(x_dataStart,yzero,x_dataStart+x_dataSpace,yzero,fill="black",width=1)
@@ -346,7 +325,7 @@ def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_d
 		lineColours = ["red"]*(len(data[0])-1)
 	if discreetX:
 		x_dataStart+=xdataToPix/2	#just affects the coords downstream
-	lines = [None]*(len(data[0])-1)	#~~~
+	lines = [None]*(len(data[0])-1)
 	for j in range(len(data[0])-1,0,-1):
 		coords = [(x_dataStart + (p[0]-xmin) * xdataToPix,yzero - p[j] * ydataToPix * ((j%2)*2-1)) for p in data]
 		lines[j-1] = canvas.create_line(coords,fill=lineColours[j-1],width=linewidth)
@@ -361,8 +340,9 @@ def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_
 	if xmin<0:
 		xzero = x_dataStart-xmin*xdataToPix
 		canvas.create_line(xzero,y_dataStart,xzero,y_dataStart+y_dataSpace,fill="black",width=1)
-	#if ymin<0:
-	#	canvas.create_line(x_dataStart,yzero,x_dataStart+x_dataSpace,yzero,fill="black",width=1)
+	if ymin<0:
+		canvas.create_line(x_dataStart,yzero,x_dataStart+x_dataSpace,yzero,fill="black",width=1)
+	
 	graph.xbase = x_dataStart
 	graph.yzero = ybase
 	graph.xdataToPix = xdataToPix
@@ -373,9 +353,6 @@ def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_
 	styleDefs["c"] = (fillColour,"",outlineThickness)
 	canvas.set_styles(styleDefs)
 	for i,point in enumerate(data):
-	#cant sort by colouring, because the graph doesnt know about this hidden value behind the colouring
-	#for i,point in sorted(zip(list(range(len(data))),data), key=lambda x: x[1]):
-		#if i%20==0:print(point)
 		xcenter = x_dataStart+(point[1]-xmin)*xdataToPix
 		ycenter = ybase-(point[2]-ymin)*ydataToPix
 		point = canvas.create_circle(xcenter,ycenter,pointRadius,fill=fillColour,outline="",outlineThickness=outlineThickness)
@@ -398,8 +375,6 @@ def canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y
 	graph.xdataToPix = xdataToPix
 	graph.ydataToPix = ydataToPix
 	
-	#print(f"[Draw HEAT] {len(data)} {len(data[0])}")
-	
 	canvas.infer_styles(colourscale)
 	
 	for x,column in enumerate(data):
@@ -421,29 +396,17 @@ def canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y
 			x_dataStart+(x+1)*xdataToPix, y2-(y+1)*ydataToPix,
 			fill=cellColour,outline="#ff00ff",width=3*fontMultiplier)
 		graph.highlightpositions.add((x,y))
-		#canvas.tag_raise(cells[x][y])	#not needed if we draw them last anyway
 	return cells
 
-def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colourscale=None,width=None,height=None,scaleFactor=1,fontMultiplier=1.0,
-			xlabel=None,ylabel=None,legend=None,x_canvasOffset=0,y_canvasOffset=0,drawBorder=False):
+def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphType=None,colourscale=None,scaleFactor=1,fontMultiplier=1.0,
+			xlabel=None,ylabel=None,legend=None,x_canvasOffset=0,y_canvasOffset=0,drawBorder=False,pointRadius=10):
 	
 	canvas.open_group()
-	#TODO get dict of parametes instead of graph !
-	#TODO cleanup here !
-	
-	#buffers depend on fontsize and screen scaling
-	
 	if drawBorder:
 		canvas.create_rectangle(x_canvasOffset,y_canvasOffset,x_canvasOffset+width,y_canvasOffset+height,outline="#000000",width=2,fill="#ffffff")
 	
-	if graphType is None:graphType = graph.graphType
-	#print(f"[Draw] Drawing {graphType}")
-	
-	if width is None:width = graph.width	#space allowed on canvas from offset
-	if height is None:height = graph.height
-	#print(f"[Debug][PLot] {graphType}")	#TODO clean up later
-	
 	#--------------------------------- Graph bounds ---------------------------------
+	#buffers depend on fontsize and screen scaling
 	titleBuffer=0
 	sideTitleBuffer=0
 	xlabelBuffer=0
@@ -492,99 +455,55 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 	y_yLabelCenter = y_yaxisStart + y_dataSpace/2
 	x_yLabelStart = x_yaxisStart -yaxisBuffer	#right most anchor
 	
-	if canvas is None:canvas = graph.canvas
-	
-	
 	#--------------------------------- Data bounds ---------------------------------
-	#if len(data)<50:print("\n".join([str(point) for point in data]))	#TODO cleanup!
 	
-	#print("graph-X: "+str(graph.xbins)+" "+str(graph.xstep)+" "+str(graph.xdataToPix))
-	#print("graph-Y: "+str(graph.ybins)+" "+str(graph.ystep)+" "+str(graph.ydataToPix))
-	
-	discreetX = False
-	x_startV = None
-	x_endV = None
+	discreetX = len(data)<31
+	graph.discreetX = discreetX
+	axis_x_min = None
+	axis_x_max = None
 	if not graphType=="HEAT":
 		if graphType=="SCATTER":
-			maxx = max([point[1] for point in data])
-			minx = min([point[1] for point in data])
-			maxy = max([point[2] for point in data])
-			miny = abs(min([point[2] for point in data]))
+			data_x_min = min([point[1] for point in data])
+			data_x_max = max([point[1] for point in data])
+			data_y_min = abs(min([point[2] for point in data]))
+			data_y_max = max([point[2] for point in data])
 		else:
-			maxx = max([point[0] for point in data])
-			minx = min([point[0] for point in data])
-			maxy = max([max([point[i] for i in range(1,len(point),2)]) for point in data])
-			miny =-max([max([point[i] for i in range(2,len(point),2)]) for point in data]) if len(data[0])>2 else 0
+			data_x_max = max([point[0] for point in data])
+			data_x_min = min([point[0] for point in data])
+			data_y_min =-max([max([point[i] for i in range(2,len(point),2)]) for point in data]) if len(data[0])>2 else 0
+			data_y_max = max([max([point[i] for i in range(1,len(point),2)]) for point in data])
 		
-		x_startV,x_endV,xstep = getAxisScale3(maxx,minValue=minx)
-		y_startV,y_endV,ystep = getAxisScale3(maxy,minValue=miny)
+		if discreetX: axis_x_min,axis_x_max,axis_x_step = data_x_min,data_x_max,1
+		else: axis_x_min,axis_x_max,axis_x_step = getAxisScale3(data_x_max,minValue=data_x_min)
 		
-		if len(data)<50:
-			discreetX = True
-	graph.discreetX = discreetX
-	if graphType=="SCATTER":
-		if x_startV is None:
-			if minx1>0:
-				xmin = int(minx1/xstep)
-				xmax = xmin + xstep * xbreaks
-			else:
-				xmax = xstep * xbreaks[0]
-				xmin = -xstep * xbreaks[1]
-		else:
-			xmin = x_startV
-			xmax = x_endV
-		#print(str(xmin)+" - "+str(xmax))
-		#ymin = int(miny1/xstep)
-		#ymax = ymin + ystep * ybreaks
-		
-		ymin = y_startV
-		ymax = y_endV
-		
-	elif graphType=="HEAT":	#TODO for selections of the sequence??
-		xmin = 0
-		xmax = xmin + graph.xstep * graph.xbins
-		xstep = graph.xstep
-		ymin = graph.yvals[0]	#?
-		ymax = graph.yvals[-1]	#?
+		if graph.globalYScale:axis_y_min,axis_y_max,axis_y_step = graph.axis_y_min,graph.axis_y_max,graph.axis_y_step
+		else:axis_y_min,axis_y_max,axis_y_step = getAxisScale3(data_y_max,minValue=data_y_min)
+	
+	elif graphType=="HEAT":
+		data_x_max = len(data)
+		data_x_min = 0
+		axis_x_min,axis_x_max,axis_x_step = getAxisScale3(data_x_max,minValue=data_x_min)
+		axis_y_min = graph.yvals[0]
+		axis_y_max = graph.yvals[-1]
 		#print(graph.yvals)
-		ystep = 1
-	else:
-		if x_startV is None:
-			if discreetX:
-				xmin = minx1
-				xmax = maxx1
-			else:
-				xmin = int(minx1/xstep)
-				xmax = xmin + xstep * xbreaks
-		else:
-			xmin = x_startV
-			xmax = x_endV
-		
-		#ymax = ystep * ybreaks[0]
-		#ymin = -ystep * ybreaks[1]
-		ymin = y_startV
-		ymax = y_endV
 	
-	#print("Proper Xdef: "+str(xmin)+" "+str(xmax)+" "+str(xstep))
-	#print("Proper Ydef: "+str(ymin)+" "+str(ymax)+" "+str(ystep))
-	
-	#print("yaxis: "+str(height)+" "+str(y_xaxisStart))
+	#print(f"[Draw] Proper X-Axis bounds: {axis_x_min} {axis_x_max} {axis_x_step}")
+	#print(f"[Draw] Proper Y-Axis bounds: {axis_y_min} {axis_y_max} {axis_y_step}")
 	
 	#--------------------------------- Axes ---------------------------------
 	if discreetX:
 		breaks = [p[0] for p in data] 
 		if not graph.xLabels is None:
 			breaks = [graph.xLabels[p[0]] for p in data]
-		#print("\nBreaks: "+str(breaks)+"\n")
-		canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,continous=False,breaks=breaks,fontsize=int(10*fontMultiplier),lineColour=lineColour)
+		canvas_createXAxis_breaks(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,breaks=breaks,fontsize=int(10*fontMultiplier),lineColour=lineColour)
 	else:
-		canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,continous=True,startv=xmin,endv=xmax,by=xstep,fontsize=int(10*fontMultiplier),lineColour=lineColour)
+		canvas_createXAxis(canvas,x_xaxisStart,x_xaxisEnd,y_xaxisStart,axis_x_min,axis_x_max,axis_x_step,fontsize=int(10*fontMultiplier),lineColour=lineColour)
 	
 	if graphType=="HEAT":#split yaxis for heatmap
-		canvas_createSplitYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=ymin,endv=ymax,by=1,linewidth=2,yaxisBuffer=20,
+		canvas_createSplitYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=axis_y_min,endv=axis_y_max,linewidth=2,yaxisBuffer=20,
 			lineColour=lineColour,fontsize=int(10*fontMultiplier))
 	else:
-		canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,continous=True,startv=ymin,endv=ymax,by=ystep,yaxisBuffer=yaxisBuffer,
+		canvas_createYAxis(canvas,y_yaxisStart,y_yaxisEnd,x_yaxisStart,startv=axis_y_min,endv=axis_y_max,by=axis_y_step,yaxisBuffer=yaxisBuffer,
 			lineColour=lineColour,fontsize=int(10*fontMultiplier))	#Count +-, cov+- ???
 	
 	#--------------------------------- Legend and Labels ---------------------------------
@@ -621,42 +540,45 @@ def canvas_createPlot(graph,canvas,data,lineColour="black",graphType=None,colour
 	#canvas.create_text((x_dataStart,y_dataStart),text="Debug data area",anchor="nw",fill="#ff0000",font="System 16 bold")
 	
 	if graphType=="BAR" or graphType=="BAR2":
-		bars = canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,discreetX=discreetX,barcolours=barcolours,
-			lineColour=lineColour,defBarcol=graph.styles["default"][0])
+		dataObjects = canvas_createBars(graph,canvas,
+			data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
+			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
+			discreetX=discreetX,barcolours=barcolours,lineColour=lineColour,defBarcol=graph.styles["default"][0])
 	
 	if graphType=="multiLine":
 		if graph.lineColours is None:
 			lineColours = ["red","red","green","green","blue","blue"]
 		else:
 			lineColours = graph.lineColours
-		lines = canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,linewidth=5,lineColours=lineColours,discreetX=discreetX)
+		dataObjects = canvas_createLines(graph,canvas,data,
+			x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
+			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
+			linewidth=5,lineColours=lineColours,discreetX=discreetX)
 	
 	if graphType=="SCATTER":
-		points = canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,pointRadius=graph.pointRadius,discreetX=discreetX,
-			fillColour=lineColour)
+		dataObjects = canvas_createPoints(graph,canvas,data,
+			x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
+			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
+			pointRadius=pointRadius,discreetX=discreetX,fillColour=lineColour)
 		
 	if graphType=="HEAT":
-		cells = canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,colourscale,xmax)	#????	#data is [x][y] = value ??
+		dataObjects = canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,colourscale,axis_x_max)
 	
 	canvas.close_group()	#data group end
 	
 	canvas.close_group()	#graph group end
 	
 	#--------------------------------- Return objects ---------------------------------
-	if graphType=="multiLine":return lines
-	if graphType=="SCATTER":return points
-	if graphType=="BAR" or graphType=="BAR2":return bars
-	if graphType=="HEAT": return cells
+	if graphType=="multiLine" or graphType=="SCATTER" or graphType=="BAR" or graphType=="BAR2" or graphType=="HEAT":
+		return dataObjects
 	return False
 
-def createBarHighlight(graph,pos):	#Used to create a highlight border around bars
+def createBarHighlight(graph,pos):	#Used to create a highlight border around bars	#TODO scale width with os scalefactor!
 	x = graph.xbase+pos*graph.xdataToPix
-	#y = graph.ybase
 	y1 = graph.y_dataStart
-	y2 = graph.y_dataSpace
-	#h = graph.ybins*graph.ystep*graph.ydataToPix
-	r = graph.barRadius+2.5
-	barHighlight = graph.canvas.create_rectangle(x-r,y1, x+r,y2, fill="",width=5,outline="#ff00c6")#ff5700")#"#ff00c6")#"#00ffff")	#ff7700
+	y2 = graph.y_dataStart+graph.y_dataSpace
+	r = graph.barradius+2.5
+	barHighlight = graph.canvas.create_rectangle(x-r,y1, x+r,y2, fill="",width=5,outline="#ff00c6")
 	return barHighlight
 
 def getColour(value,colourscale):
@@ -715,42 +637,40 @@ def isHexColour(string):
 			return False
 	return True
 
-def getAxisScale(maxValue,minValue=1):
-	if maxValue<20:return int(maxValue)+1,1
-	allowedSteps = [1,5,10,20,50,100,200,500,1000,2000,5000,10000,50000,100000,500000,1000000,5000000,10000000]
-	targetbreaks = 9
-	best_breaks = -1
-	best_step = -1
-	for stepSize in allowedSteps:
-		nbreaks = int((maxValue-2)/stepSize)+1
-		if nbreaks < 5:break	#stepSize increases, so there is nothing more
-		if nbreaks >20:continue
-		if abs(nbreaks-targetbreaks)<abs(best_breaks-targetbreaks):
-			best_breaks = nbreaks
-			best_step = stepSize
-	if best_breaks==-1 or best_step==-1: print(f"[GraphLib] Error no stepsize found for {maxValue} {minValue}")
-	#print(f"[Debug][AxisScale] Steps for {minValue}-{maxValue}: {best_step}x{best_breaks}")
-	return best_breaks,best_step
-
-def getAxisScale2(maxValue1,maxValue2):
-	allowedSteps = [1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,50000,100000,500000,1000000,5000000,10000000]
-	if maxValue1<2 and maxValue2<2:
-		allowedSteps = [0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5]
-	targetbreaks = 9
-	best_nbreaks = -1
-	best_step = -1
-	best_breaks = (1,1)
-	for stepSize in allowedSteps:
-		nbreaks = int(maxValue1/stepSize)+3+int(abs(maxValue2)/stepSize)
-		if nbreaks < 5:break	#stepSize increases, so there is nothing more
-		if nbreaks >20:continue
-		if abs(nbreaks-targetbreaks)<abs(best_nbreaks-targetbreaks):
-			best_nbreaks = nbreaks
-			best_step = stepSize
-			best_breaks = (int(abs(maxValue1)/stepSize)+1,0 if maxValue2==0 else int(abs(maxValue2)/stepSize)+1)
-	#print(f"[Debug][AxisScale2] Steps for {maxValue1}-{maxValue2}: {best_step}x{best_breaks}")
-	return best_breaks,best_step
-
+def getColourscale(graphData,colourscale_define):
+	allvals=list()
+	for x,column in enumerate(graphData):
+		allvals.extend(column)
+	sortedValues = sorted(allvals)
+	
+	maxval = max([max(column) for column in graphData])
+	sumval = sum([sum(column) for column in graphData])
+	valcount = len(graphData) * len(graphData[0])
+	
+	colourscale = list()
+	legendDesc = list()
+	if not colourscale_define is None:
+		for point,colour in colourscale_define:
+			val=-1
+			if point[0]=="abs":
+				val=point[1]
+				legendDesc.append((getHexColourTuple(colour),str(val)))
+			elif point[0]=="rel":
+				if point[1]=="av":
+					val=sumval/valcount
+					legendDesc.append((getHexColourTuple(colour),str(val)+" (average)"))
+				elif point[1]=="max":
+					val=maxval
+					legendDesc.append((getHexColourTuple(colour),str(val)+" (max)"))
+				elif point[1]=="percentile":
+					val=sortedValues[int(len(sortedValues)/100*point[2])]
+					legendDesc.append((getHexColourTuple(colour),str(val)+" (p"+str(point[2])+")"))
+				else:
+					print("ERROR: could not find relative definition in colouscale point: "+str(point))
+			else:
+				print("ERROR: could not find colourscale point type: "+str(point))
+			colourscale.append((val,colour))
+	return colourscale,legendDesc
 
 def getAxisScale3(maxValue,minValue=0):	#returns start,end,by	#start can be negative
 	if minValue>maxValue: return None,None
@@ -760,11 +680,7 @@ def getAxisScale3(maxValue,minValue=0):	#returns start,end,by	#start can be nega
 	if valueRange==0:
 		valueRange=1
 		maxValue+=1
-	valueStr = str(valueRange)
-	#ndigits = len(valueStr)
 	ndigits = ceil(log10(valueRange))
-	#fstDigit = valueStr[:1]
-	#otDigits = int(valueStr[:2])
 	allowedBorders = [1,2,5]
 	marks = list()
 	for i in [-2,-1]:

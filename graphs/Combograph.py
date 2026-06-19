@@ -14,16 +14,11 @@ import gui.functions as fun
 #stores the data, syncs the sizes, distributes them and later displays in gui
 
 class Combograph:
-	def __init__(self,main,title,groupID,graphType=None,legend=None,positionalColouring=None,styles=None,xlab=None,ylab=None,lineColours=None):
-		#TODO cleanup parent frame reference & and make setter + re-gen IGs for pop-out
-		#when popping out: re-gen IGs (info-bar and canvas), then draw graph from IG onto canvas
-		#when changing params: just re-draw...?
-		#what if size changed between??? ~ change size of existing canvas?
-		#canvas.config(width=,height=)
-		#and then clear the canvas !	canvas.delete("all")
-		#TODO cleanout graph sizes; set only when display is called (and then shared / synced across graphs if necessary)
+	def __init__(self,main,title,groupID,graphType=None,legend=None,positionalColouring=None,styles=None,xlab=None,ylab=None,lineColours=None,isScrollGraph=True):
 		
-		#TODO for pop out:
+		#when changing params: just re-draw...? ~ requires checking if the respective Combograph already exists
+		
+		# for pop out:
 		#button on target-notebook
 		#removes tab from parent
 		#creates Toplevel()
@@ -35,9 +30,6 @@ class Combograph:
 		self.groupID = groupID	#key for main.outputGroups -> notebook
 		self.main = main
 		#print("[Combo] Creating combograph "+str(self.title))
-		
-		self.pointRadius = 10	#TODO allow setting from GUI
-		
 		
 		self.xlab=xlab
 		self.ylab=ylab
@@ -68,7 +60,6 @@ class Combograph:
 		self.globalYScale=False
 		self.ybins = -1
 		self.ystep = -1
-		self.colouroverride = dict()
 		
 		self.connectedGraphs = list()
 		self.addConnectedGraph(self)	#to update all IGS withing the same combo
@@ -80,7 +71,9 @@ class Combograph:
 		
 		self.lineColours=lineColours
 		
-		self.graphFrame = None
+		self.comboFrame_base = None
+		
+		self.isScrollGraph=isScrollGraph
 	
 	def setStyles(self,styles):
 		self.styles=dict()	#id -> (fill,stroke,stroke-width)
@@ -93,10 +86,10 @@ class Combograph:
 		self.descriptorFields = descriptorFields
 		self.pointDescriptor = pointDescriptor
 	
-	def addData(self,data,globalYScale=False,colourscale=None,colouroverride=None,axislabels=None):
+	def addData(self,data,globalYScale=False,colourscale_define=None,axislabels=None):
 		#print("[Combo] Setting data for combograph "+str(self.title)+", "+str(len(data))+" sub-graphs")
 		self.globalYScale=globalYScale
-		self.colourscale_define=colourscale
+		self.colourscale_define=colourscale_define
 		ndatapoints = len(data[0][1])
 		if self.graphType=="HEAT":
 			#data = [(libID,[heatmap,lengthList,posList])]
@@ -104,7 +97,7 @@ class Combograph:
 			self.yvals=data[0][1][1]
 			ndatapoints = len(self.xvals)
 			self.ybins = len(self.yvals)
-			self.ystep = 1	#needs to be 1, for some reason...	#TODO
+			self.ystep = 1
 			#print("[Combo] HEAT: "+str(ndatapoints)+" x "+str(self.ybins)
 			self.highlightpositions = set()
 			
@@ -114,109 +107,77 @@ class Combograph:
 			return
 		for i,(graphName,graphData) in enumerate(data):
 			self.addGraph(graphName,graphData,
-				colouroverride=None if colouroverride is None else colouroverride[i],
 				#axislabels is list of [(xlab,ylab) for each subgraph]	#(to allow for different types of scatter plots, e.g. volcano+positional)
 				axislabels=(self.xlab,self.ylab) if axislabels is None else axislabels[i])
 			
 			if len(graphData) != ndatapoints and not self.graphType=="HEAT":
 				print("[Combo] ERROR! data are not the same length!:\n\t"+str(ndatapoints)+"\t"+str(len(graphData)))
 		
-		if self.graphType=="SCATTER":
-			return
-		
-		self.xbins,self.xstep = graphLib.getAxisScale(ndatapoints)	#TODO gets re-calculated when drawing anyway...
-		if self.xbins==-1 or self.xstep==-1:
-			self.error=True
-		#print("[Combo] Xaxis: "+str(self.xbins)+" "+str(self.xstep)+" "+str(ndatapoints))
-		
 		if self.globalYScale:
-			if self.graphType=="HEAT":
-				pass
-			else:
-				maxy1=0
-				maxy2=0
-				
+			if self.graphType=="BAR" or self.graphType=="BAR2" or self.graphType=="multiLine":
+				data_y_min = 0
+				data_y_max = 0
 				for i,(graphName,graphData) in enumerate(data):
-					maxy1 = max(max([max([point[i] for i in range(1,len(point),2)]) for point in graphData]),maxy1)
-					if len(graphData[0])>2:
-						maxy2 = max(max([max([point[i] for i in range(2,len(point),2)]) for point in graphData]),maxy2)
+					data_y_min = min(-max([max([point[i] for i in range(2,len(point),2)]) for point in graphData]) if len(graphData[0])>2 else 0,data_y_min)
+					data_y_max = max(max([max([point[i] for i in range(1,len(point),2)]) for point in graphData]),data_y_max)
 				
-				if len(graphData[0])>2:
-					self.ybins,self.ystep = graphLib.getAxisScale2(maxy1,maxy2)	#TODO currently overriden when drawing
-				else:
-					self.ybins,self.ystep = graphLib.getAxisScale(maxy1)
-				if self.ybins==-1 or self.ystep==-1:
-					self.error=True
-					#print(str(maxy1)+" "+str(maxy2))
-					print("[Combo] ERROR: No step size found for "+str(graphName)+": "+"\t".join(
-						[str(max([point[i] for point in graphData])) for i in range(1,len(graphData[0]))]))
-				print("[Combo] Global Y-Bins calculated: "+str(self.ybins))
+				self.axis_y_min,self.axis_y_max,self.axis_y_step = graphLib.getAxisScale3(data_y_max,minValue=data_y_min)
 	
-	def addGraph(self,graphName,graphData,colouroverride=None,axislabels=None):
+	def addGraph(self,graphName,graphData,axislabels=None):
 		self.allGraphData[graphName]=graphData
-		self.colouroverride[graphName]=colouroverride	#TODO instead store all this in one parameter dict to then pass onto the drawfunciton... ?
-								#curretnly unused; used for the coulourscale of points in a scatter graph
 		self.axislabels[graphName]=axislabels
 	
-	def setXLabels(self,xLabels,xSpace):
+	def setXLabels(self,xLabels,xLabelSpace):
 		self.xLabels=xLabels
-		self.xLabelSpace=xSpace
+		self.xLabelSpace=xLabelSpace
 	
-	def generateIGs(self,main,resultsPath):	#TODO set parent frame for combo and then gen IGs onto that... ~~ split generate from draw??
+	def generateIGs(self,main,resultsPath):
 		#print("\n[Combo] Creating IGs for combograph "+str(self.title)+":")
 		
-		#self.graphFrame.bind_all("<Button-4>",self.mouseWheelScroll)	#TODO reimplement scrol with mouse in graph area
-		#self.graphFrame.bind_all("<Button-5>",self.mouseWheelScroll)
+		if self.comboFrame_base is None:
 		
-		if self.graphFrame is None:
-			notebook,scrollbar,scrollList = fun.addOutputGraphicsGroup(main,self.groupID)
+			self.parentnotebook = fun.addOutputGraphicsGroup(main,self.groupID,isScrollGraph=self.isScrollGraph)
 			#print(f"[Combo] generating new Tab {self.groupID}")
-			padFrame = ThemedFrame(notebook,style="gBorder.TFrame")
-			notebook.add(padFrame,text=self.title)
+			if self.isScrollGraph:
+				self.comboFrame_base,tabCanvas,self.comboFrame = self.parentnotebook.addScrollTab(self.title)	#inner_frame_style="gBorder.TFrame"
+			else:
+				self.comboFrame_base = ThemedFrame(self.parentnotebook,style="gBorder.TFrame")
+				self.parentnotebook.add(self.comboFrame_base,text=self.title)
+				self.comboFrame = self.comboFrame_base
 			
-			self.graphFrame = ThemedFrame(padFrame,style="TEST.TFrame")
-			self.graphFrame.pack(fill="both",expand=True,pady=(main.frameBorderSize*2,0))
-			
-			self.graphCanvas = Canvas(self.graphFrame)#,bg=self.backgroundColour,highlightthickness=0)
-			scrollList.append(self.graphCanvas)
-			self.graphCanvas["yscrollcommand"] = scrollbar.set
-			self.graphCanvas.pack(fill="both",expand=True,anchor="nw")
-			self.graphFrame2 = ThemedFrame(self.graphCanvas,style="TEST.TFrame")
-			self.graphCanvas.create_window((0,0),window=self.graphFrame2,anchor="nw")
-			
-			ThemedLabel(self.graphFrame2,text=self.title+" - "+self.groupID,style="Medium.TLabel").pack(fill="x",anchor="nw",expand=True)
-			
-			#required for scrolling, set the scrollregion to the new content of the canvas
-			main.mainWindow.after(1000,lambda canvas=self.graphCanvas: main.fitCanvasWidthGraph(canvas))
+			ThemedLabel(self.comboFrame_base,text=self.title+" - "+self.groupID,style="Medium.TLabel").pack(fill="x",anchor="nw",side="top")
+			if self.isScrollGraph:	#addScrollTab requires extra packing to allow for better customisability
+				tabCanvas.pack(fill="both",expand=True,anchor="nw")
 		
 		#self.IGdict = dict()	#TODO dont delete Combos and IGs, just re-draw them ! (in a different function)
 		#genIGs should only be called once ! or again if we pop-out the window!
 		if len(self.IGdict)>0:return
+		graphCanvasHeight = main.mainNotebook.winfo_height()*0.36
+		if len(self.allGraphData.keys())==1:graphCanvasHeight = main.mainNotebook.winfo_height()*0.75
 		
-		#graphWidth = basegui.mainNotebook.winfo_width()
-		graphWidth = main.mainNotebook.winfo_width()-30	#TODO refer to combo parentframe !
-		#graphHeight = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
-		graphHeight = main.mainNotebook.winfo_height()*0.37
-		#if graphHeightlen(self.allGraphData.keys())==1: = basegui.mainNotebook.winfo_height()*0.80/len(self.allGraphData.keys())
-		if len(self.allGraphData.keys())==1:graphHeight = main.mainNotebook.winfo_height()*0.75
 		for (graphName,graphData) in self.allGraphData.items():
 			xlab,ylab = self.axislabels[graphName]
 			#print("\nLABELS: "+str(self.axislabels[graphName]))
 			#resultsPath is only used for the inate eps export of tkinter canvas
-			newGraph = ig.InteractiveGraph(main,self.graphFrame2,graphWidth,graphHeight,graphName,resultsPath,styles=self.styles,
+			newGraph = ig.InteractiveGraph(main,self.comboFrame,graphCanvasHeight,graphName,resultsPath,styles=self.styles,
 				positionalColouring=self.positionalColouring,graphType = self.graphType,parentCombo=self,
 				xlab=xlab,ylab=ylab,lineColours=self.lineColours)
 			self.IGdict[graphName]=newGraph
 			#print("[Combo] Y-bins for IG: "+str(self.ybins))
 			newGraph.setXLabels(self.xLabels)
-			newGraph.setData(self.graphType,graphData,legend=self.legend,ybins=self.ybins,ystep=self.ystep,colourscale=self.colourscale_define)
-			if graphName in self.colouroverride:
-				newGraph.overrideColours(self.colouroverride[graphName])
+			newGraph.setData(self.graphType,graphData,legend=self.legend,colourscale_define=self.colourscale_define)#,ybins=self.ybins,ystep=self.ystep
+			if self.globalYScale: 
+				newGraph.globalYScale = True
+				newGraph.axis_y_min,newGraph.axis_y_max,newGraph.axis_y_step = self.axis_y_min,self.axis_y_max,self.axis_y_step
 	
 	def drawOntoGui(self,fontMultiplier=1.0):
 		#print("[Combo] Drawing IGs of combograph "+str(self.title)+" onto GUI")
+		graphWidth = self.main.mainWindow.winfo_width()-self.main.frameBorderSize*4
+		graphCanvasHeight = self.main.mainNotebook.winfo_height()*0.36
+		if len(self.allGraphData.keys())==1:graphCanvasHeight = self.main.mainNotebook.winfo_height()*0.75
+		pointRadius = 10	#TODO allow setting from GUI
 		for graphName,newGraph in self.IGdict.items():
-			newGraph.drawGraph(fontMultiplier=fontMultiplier)
+			newGraph.drawGraph(graphWidth,graphCanvasHeight,fontMultiplier=fontMultiplier,pointRadius=pointRadius)
 	
 	def addConnectedGraph(self,comboGraph):#can send signals to another
 		self.connectedGraphs.append(comboGraph)
@@ -234,7 +195,7 @@ class Combograph:
 			self.main.writeTextOutput("\t".join([str(v) for v in self.pointDescriptor[pos]]))
 	
 	def clearPoint(self, pos):
-		#print("[Combo] Clearing point "+str(pos))
+		#print(f"[Combo] Clearing point at position {pos}")
 		self.selectedPoints.remove(pos)
 		for igraph in self.IGdict.values():
 			igraph.clearPoint(pos)
@@ -246,34 +207,29 @@ class Combograph:
 	
 	def clearConnected(self):
 		print("[Combo] Clearing all connected Graphs")
-		#self.clearSelection()	#self is in connectedGraphs
-		for comboGraph in self.connectedGraphs:
+		for comboGraph in self.connectedGraphs:	#self is in connectedGraphs
 			comboGraph.clearSelection()
 	
-	def exportAsSVG(self,resultsPath,exportW,exportH,fontMultiplier):
-		#TODO specify libraries and make this the function from the IG for self-export (with libID in the defaultname)
+	def exportAsSVG(self,resultsPath,graphWidth,graphHeight,fontMultiplier,selectedGraphName=None,overridePath=False):
 		titleFontsize = int(26*fontMultiplier)
-		#fonts in SVG are only halve as big. #this affects the spacing given to text !
-		#fixed in SVG_canvas class. #TODO Still need to address other spacing issues and the size of points in scatter plot!
 		mySVG = list()
 		mySVG.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>")
 		mySVG.append("<!-- Created by RNAival, from the project DigitalPROTECT, University of Halle -->")
 		titleOffset = int(titleFontsize)*2
-		tw=int(graphWidth) if exportW is None else int(exportW)
 		libNameSpace = int(40*fontMultiplier)
-		th=(int(graphHeight) if exportH is None else int(exportH))
-		mySVG.append("<svg x=\""+str(0)+"\" y=\""+str(0)+"\" width=\""+str(tw+libNameSpace)+"\" height=\""
-			+str((th+10)*len(self.allGraphData.keys())+titleOffset-10)+"\" viewbox=\"0 0 "+str(tw)
-			+" "+str((th+10)*len(self.allGraphData.keys())+titleOffset-10)+"\" xmlns=\"http://www.w3.org/2000/svg\">")
-		graphLib.svg_drawRect(mySVG,0,0,tw+libNameSpace,(th+10)*len(self.allGraphData.keys())+titleOffset-10,sw=2,stroke="#000000",fill="#ffffff")
-		graphLib.svg_drawText(mySVG,tw/2,titleFontsize,self.title,fontsize=int(titleFontsize),xanchor="middle",yanchor="middle")
 		
-		#TODO Styles for svg	#address this from the graph creation side first
-		#TODO globalYScale
+		nplots = len(self.allGraphData.keys()) if selectedGraphName is None else 1
+		mySVG.append("<svg x=\""+str(0)+"\" y=\""+str(0)+"\" width=\""+str(graphWidth+libNameSpace)+"\" height=\""
+			+str((graphHeight+10)*nplots+titleOffset)+"\" viewbox=\"0 0 "+str(graphWidth)
+			+" "+str((graphHeight+10)*nplots+titleOffset)+"\" xmlns=\"http://www.w3.org/2000/svg\">")
+		graphLib.svg_drawRect(mySVG,0,0,graphWidth+libNameSpace,(graphHeight+10)*nplots+titleOffset,sw=2,stroke="#000000",fill="#ffffff")
+		graphLib.svg_drawText(mySVG,graphWidth/2,titleFontsize,self.title,fontsize=int(titleFontsize),xanchor="middle",yanchor="middle")
+		
 		for i,(graphName,graphData) in enumerate(self.allGraphData.items()):
-			graphLib.svg_drawText(mySVG,tw+int(7*fontMultiplier),(th+10)*i + titleOffset+th/2,str(graphName),
+			if not selectedGraphName is None and graphName!=selectedGraphName:continue
+			graphLib.svg_drawText(mySVG,graphWidth+int(7*fontMultiplier),(graphHeight+10)*i + titleOffset+graphHeight/2,str(graphName),
 				xanchor="middle",yanchor="bottom",rotation=90,fontsize=int(22*fontMultiplier))
-			canvas = graphLib.SVG_Canvas(mySVG,startx=0,starty=(th+10)*i + titleOffset,width=500,height=500)
+			canvas = graphLib.SVG_Canvas(mySVG,startx=0,starty=(graphHeight+10)*i + titleOffset,width=500,height=500)
 			if self.graphType == "HEAT":
 				graphData=graphData[0]
 				colourscale,legend = getColourScale(graphData,self.colourscale_define)
@@ -282,73 +238,15 @@ class Combograph:
 				legend=self.legend
 			canvas.set_styles(self.styles)
 			xlab,ylab = self.axislabels[graphName]
-			graphLib.canvas_createPlot(self,canvas,graphData,lineColour=self.main.graphLineColour,graphType=self.graphType,colourscale=colourscale,
-				width=tw,height=th,fontMultiplier=fontMultiplier,
-				xlabel=xlab,ylabel=ylab,legend=legend,x_canvasOffset=0,y_canvasOffset=(th+10)*i + titleOffset,drawBorder=True)
+			graphLib.canvas_createPlot(self,canvas,graphData,width=graphWidth,height=graphHeight,lineColour=self.main.graphLineColour,graphType=self.graphType,
+				colourscale=colourscale,fontMultiplier=fontMultiplier,
+				xlabel=xlab,ylabel=ylab,legend=legend,x_canvasOffset=0,y_canvasOffset=(graphHeight+10)*i + titleOffset,drawBorder=True,pointRadius=4)
 		
 		mySVG.append("</svg>")
-		
-		with open(os.path.join(resultsPath,f"{self.groupID}_{self.title}.svg"),"w") as svgw:
+		soloExtra = "" if selectedGraphName is None else "_"+selectedGraphName
+		savePath = resultsPath if overridePath else os.path.join(resultsPath,f"{self.groupID}_{self.title}{soloExtra}.svg")
+		with open(savePath,"w") as svgw:
 			svgw.write("\n".join(mySVG))
-	
-	def calcGraphBounds(self,graphType=None):	#TODO unused and outdated; could be used for synchronised y-scale
-		if not graphType is None: self.graphType=graphType
-		if self.graphType is None:
-			print("ERROR: graphtype not set!")
-			return
-		if self.graphType=="BAR":
-			for graphName,graphData in self.graphDataList:
-				minx=min([point[0] for point in graphData])
-				maxx=max([point[0] for point in graphData])
-				
-				if self.combo_x_min is None:self.combo_x_min=minx
-				elif self.combo_x_min==minx:pass
-				else:
-					print("ERROR: inconsistent graphData: min X: "+str(self.combo_x_min)+" "+str(minx))
-					self.combo_x_min=min(self.combo_x_min,minx)
-				
-				if self.combo_x_max is None:self.combo_x_max=maxx
-				elif self.combo_x_max==maxx:pass
-				else:
-					print("ERROR: inconsistent graphData: max X: "+str(self.combo_x_max)+" "+str(maxx))
-					self.combo_x_max=max(self.combo_x_max,maxx)
-				
-				miny=min([min([v*(-1 if i%2==1 else 1) for i,v in enumerate(point[1:])]) for point in graphData])
-				maxy=max([max([v*(-1 if i%2==1 else 1) for i,v in enumerate(point[1:])]) for point in graphData])
-				
-				if self.combo_y_min is None:self.combo_y_min=miny
-				elif self.combo_y_min==maxy:pass
-				else:
-					#print("ERROR: inconsistent graphData: min Y: "+str(self.combo_y_min)+" "+str(miny))
-					self.combo_y_min=min(self.combo_y_min,miny)
-				
-				if self.combo_y_max is None:self.combo_y_max=maxy
-				elif self.combo_y_max==maxy:pass
-				else:
-					#print("ERROR: inconsistent graphData: max Y: "+str(self.combo_y_max)+" "+str(maxy))
-					self.combo_y_max=max(self.combo_y_max,maxy)
-					
-		if self.graphType=="Map":
-			#TODO check that dimensions match
-			pass
-		
-		print("[Combo] "+self.title+"-Bounds: "+str(self.combo_x_min)+"-"+str(self.combo_x_max)+"x"+str(self.combo_y_min)+"-"+str(self.combo_y_max))
-	
-	def setGraphBounds(self,minx=None,maxx=None,miny=None,maxy=None):	#overwrite bounds AFTER calculating them from the data
-		if not minx is None: self.combo_x_min=minx
-		if not maxx is None: self.combo_x_max=maxx
-		if not miny is None: self.combo_y_min=miny
-		if not maxy is None: self.combo_y_max=maxy
-		print("[Combo] "+self.title+"-Bounds: "+str(self.combo_x_min)+"-"+str(self.combo_x_max)+"x"+str(self.combo_y_min)+"-"+str(self.combo_y_max))
-	
-	#----------------------- GUI related funcitons ------------------------------
-	def setGuiSpace(self,parent,xspace,yspace):
-		self.parent=parent
-		self.xspace=xspace
-		self.yspace=yspace	#TODO may be unlimited with a scrollbar ~~
-	
-	def setGUIStoragePath(self,guipath):
-		self.guipath=guipath
 
 def getColourScale(graphData,colourscale_define):
 	

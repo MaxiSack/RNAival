@@ -64,6 +64,8 @@ class Main():
 		
 		defineGUI(self)
 		
+		#self.PM.printVarsOfType("bool")
+		
 	def reset(self):
 		print("\n[Main] resetting everything")
 		self.foldoutFrameReferenceList = list()

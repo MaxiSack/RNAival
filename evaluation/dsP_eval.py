@@ -6,7 +6,7 @@ from functions.baseFunctions import getReverseSeq
 
 # execution related functions ---------------------------------------------------------------
 
-def exportGraphs(main):
+def exportGraphs(main):	#TODO move these functions somewhere else
 	print("\n[siGUI] Exporting graphs")
 	main.writeLog("\n-------------------------------------------------------\nExporting graphs")
 	
@@ -24,8 +24,10 @@ def displayGraphs(main):
 	if not main.PM.validateTags(["graphics"]):
 		main.writeWarning("Error validating graphic parameters.")
 		return False
+	main.mainNotebook.select(main.graphicsTabIndex)			#select before graph generation to make scrollbars of graphs behave nicely
 	if lg.showGraphs(main,main.PM.get("fontMultiplierGUI")):
-		main.mainNotebook.select(main.graphicsTabIndex)
+		#main.mainNotebook.select(main.graphicsTabIndex)	#only select later once all graphs have been generated
+		pass
 	print("\n[siGUI] ...done.")
 
 def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TODO update this to the new system

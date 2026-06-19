@@ -90,7 +90,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		if len(graphList) ==1:
 			# ------------- Abundance Bar graph -------------------
 			graphNameA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR")
+			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR",isScrollGraph=False)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			graphA.addData(graphList,globalYScale=True,axislabels=axisLabels)
@@ -104,7 +104,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		elif len(graphList) ==2:
 			# ------------- Abundance Bar2 graph -------------------
 			graphNameA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR2")
+			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			counts2 = [(graphList[0][1][i][0],graphList[0][1][i][1],graphList[1][1][i][1])
@@ -115,7 +115,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			
 			# ------------- Volcano-like scatter graph -------------------
 			graphNameV = f"Foldchange_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphV = Combograph(main,graphNameV,targetBundle.mainSeqID+"_"+psname,graphType="SCATTER")
+			graphV = Combograph(main,graphNameV,targetBundle.mainSeqID+"_"+psname,graphType="SCATTER",isScrollGraph=False)
 			graphV.bundleID=bundleID
 			graphV.psname=psname
 			points = [(graphList[0][1][i][0],log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
@@ -130,7 +130,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			#logPoolCounts = [(graphList[0][1][i][0],graphList[0][1][i][0],log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
 			#			 for i in range(len(graphList[0][1]))]
 			#logPoolGraph = (graphList[0][0]+"_log",logPoolCounts)
-			#graphV.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],colouroverride=[None,pointColours],
+			#graphV.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],
 			#	axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
 			graphV.addData([(graphList[0][0]+"_Volcano",points)],	#Only show volcano
 				axislabels=[("Log2 Foldchange","Log2 Difference")])
@@ -164,7 +164,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			if False:
 				# ------------- Score graph -------------------
 				graphNameS = f"Score_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-				graphS = Combograph(main,graphNameS,targetBundle.mainSeqID+"_"+psname,graphType="BAR2")
+				graphS = Combograph(main,graphNameS,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False)
 				graphS.bundleID=bundleID
 				graphS.psname=psname
 				scoreCounts = [(
