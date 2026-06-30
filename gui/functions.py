@@ -23,14 +23,7 @@ import gui.siI_eval as sig
 from gui.SettingsMenu import SettingsMenu
 from gui.ScrollableNotebook import ScrollableNotebook
 
-nucset={"A","C","G","T","U","N"}
-idset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","_","-"}
-intListset = {"1","2","3","4","5","6","7","8","9","0"," ",","}
-hexset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0"}
-
-defaultColours = ["#ff0000","#00ff00","#0000ff","#ffff00","#00ffff","#ff00ff","#ddaa00","#aaff00","#00dddd"]#,"#","#","#"]
-
-
+defaultColours = ["#ff0000","#00ff00","#0000ff","#ffff00","#00ffff","#ff00ff","#ddaa00","#aaff00","#00dddd"]
 
 #Serves as container for functions that work on/with main
 
@@ -102,53 +95,64 @@ def initProject(main,pp):
 	main.mainWindow.title(f"RNAival - {os.path.basename(pp)}")
 	for module in main.moduleDict.values():
 		module.init_project(main)
+		module.after_project_load(main)
 
 def loadProject(main,pp):
 	settingsFile = os.path.join(pp,"ProjectSettings.json")
-	if os.path.isfile(settingsFile):
-		
-		main.reset()
-		
-		print("[main func] loading project "+pp)
-		initProject(main,pp)
-		
-		parameterDict = dict()
-		inputDict = dict()
-		print(f"[main func] Loading settings from {settingsFile}")
-		showAllTabs(main)
-		with open(settingsFile,"r") as jr:
-			jsonstr = jr.read()
+	try:
+		if os.path.isfile(settingsFile):
 			
-			settingsObject = json.loads(jsonstr)
+			main.reset()
 			
-			if isinstance(settingsObject, dict):	#new(er) storage system, split by type of data/setting
-				parameterDict = settingsObject
-				inputListFile = os.path.join(pp,"InputFiles.json")	#TODO make nicer, split siI pairs of
-				with open(inputListFile,"r") as jr:
-					jsonstr = jr.read()
-					inputDict = json.loads(jsonstr)
-			elif isinstance(settingsObject, list):	#Old storage system
-				#["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
-				_,parameterDict,_,inputDict = json.loads(jsonstr)
-		
-		main.PM.setAll(parameterDict)
-		main.PM.loadParameterSets()
-		main.IM.setAll(inputDict,main=main)
-		updateTargetListFrame(main)
-		
-		for child in main.pairListFrame.pairChildren:child.destroy()
-		main.pairList = list()
-		libPairs = main.IM.getSIIPairs()
-		#print(f"[main func] LibPairs: {libPairs}")
-		for pair in libPairs:
-			sig.addPair(main,pairLoad=pair)
-		
-		for module in main.moduleDict.values():
-			module.after_project_load(main)
-		
-		main.mainNotebook.select(0)
-	else:
-		print(f"[main func] ERROR, File {settingsFile} not found.")
+			print("[main func] loading project "+pp)
+			initProject(main,pp)
+			
+			parameterDict = dict()
+			inputDict = dict()
+			print(f"[main func] Loading settings from {settingsFile}")
+			showAllTabs(main)
+			with open(settingsFile,"r") as jr:
+				jsonstr = jr.read()
+				
+				settingsObject = json.loads(jsonstr)
+				
+				if isinstance(settingsObject, dict):	#new(er) storage system, split by type of data/setting
+					parameterDict = settingsObject
+					inputListFile = os.path.join(pp,"InputFiles.json")	#TODO make nicer, split siI pairs of
+					with open(inputListFile,"r") as jr:
+						jsonstr = jr.read()
+						inputDict = json.loads(jsonstr)
+				elif isinstance(settingsObject, list):	#Old storage system
+					#["Parameters:",main.PM.getDict(),"Input files:",main.IM.serialize()]
+					_,parameterDict,_,inputDict = json.loads(jsonstr)
+			
+			main.PM.setAll(parameterDict)
+			main.PM.loadParameterSets()
+			main.IM.setAll(inputDict,main=main)
+			updateTargetListFrame(main)
+			
+			for child in main.pairListFrame.pairChildren:child.destroy()
+			main.pairList = list()
+			libPairs = main.IM.getSIIPairs()
+			#print(f"[main func] LibPairs: {libPairs}")
+			for pair in libPairs:
+				sig.addPair(main,pairLoad=pair)
+			
+			for module in main.moduleDict.values():
+				module.after_project_load(main)
+			
+			main.mainNotebook.select(0)
+			
+			
+			if main.PM.get("showGraphsOnProjectLoad"):
+				main.loadDataIntoGUI()
+		else:
+			print(f"[main func] ERROR, Project {settingsFile} not found.")
+			return False
+	except Exception as e:
+		main.writeError(f"Error loading project from \"{settingsFile}\".")
+		main.writeError(str(e))
+		return False
 
 def updateLastProjectsFile(currentProject,execPath):
 	lastProjects = [currentProject]
@@ -172,15 +176,27 @@ def saveSettings(main):
 	#main.PM.printTags()
 	projectSettings = main.PM.getDict(tags=["project","graphics"])
 	#print(projectSettings)
-	with open(os.path.join(main.PM.get("projectPath"),"ProjectSettings.json"),"w") as jw:
-		json.dump(projectSettings,jw,indent="\t",sort_keys=True)
+	projectSettingsPath = os.path.join(main.PM.get("projectPath"),"ProjectSettings.json")
+	try:
+		with open(projectSettingsPath,"w") as jw:
+			json.dump(projectSettings,jw,indent="\t",sort_keys=True)
+	except Exception as e:
+		main.writeError(f"Error saving project settings to \"{projectSettingsPath}\".")
+		main.writeError(str(e))
+		return False
 	
 	#updateSeqFiles(main)
 	saveSeqFiles(main)
 	sig.updateSIILibPairs(main)
 	#print(main.IM.toString())
-	with open(os.path.join(main.PM.get("projectPath"),"InputFiles.json"),"w") as jw:
-		json.dump(main.IM.serialize(),jw,indent="\t",sort_keys=True)
+	inputSettingsPath = os.path.join(main.PM.get("projectPath"),"InputFiles.json")
+	try:
+		with open(inputSettingsPath,"w") as jw:
+			json.dump(main.IM.serialize(),jw,indent="\t",sort_keys=True)
+	except Exception as e:
+		main.writeError(f"Error saving input settings to \"{inputSettingsPath}\".")
+		main.writeError(str(e))
+		return False
 	
 
 def openProjectList():
@@ -190,15 +206,18 @@ def openSettingsMenu():
 def openAboutMenu():
 	print("[main func] [WIP] Showing About")
 
+def clearGraphics(main):
+	#delete existing graphs (composition may have changed)
+	main.comboGraphs = dict()
+	main.outputGroups = dict()
+	for child in main.outputGraphicsNotebook.winfo_children():child.destroy()	#just delete everything
+
 def loadDataIntoGUI(main):
 	if not main.PM.validateTags(["graphics"]):
 		main.writeWarning("Error validating graphic parameters.")
 		return False
 	
-	#delete existing graphs (composition may have changed)
-	main.comboGraphs = dict()
-	main.outputGroups = dict()	#just delete everything
-	for child in main.outputGraphicsNotebook.winfo_children():child.destroy()
+	clearGraphics(main)
 	
 	b1=sig.loadData(main,export=False,gui=False)
 	main.showTextOutputTab()
@@ -292,7 +311,7 @@ def createTogglebutton(main,parent,boolVar,syncKey=None):
 def openInternalFoldout(main,foldoutID):	#call to toggle thefoldout buttons with ID
 	fouldoutFrameTuple = main.foldoutFrameReferenceList[foldoutID]
 	#print(f"\nFoldout: {fouldoutFrameTuple}")
-	print(f"[func] opening fouldout with ID {foldoutID} and open-state {main.foldoutStates[foldoutID]}")
+	#print(f"[func] opening fouldout with ID {foldoutID} and open-state {main.foldoutStates[foldoutID]}")
 	
 	if main.foldoutStates[foldoutID]:
 		main.foldoutStates[foldoutID]=False
@@ -452,17 +471,27 @@ def loadModules(main):
 
 def loadProgramSettings(main):
 	settingsFile = os.path.join(main.execPath,"Settings.json")
-	if os.path.isfile(settingsFile):
-		with open(settingsFile,"r") as jr:
-			jsonstr = jr.read()
-			generalSettingsDict = json.loads(jsonstr)
-			main.PM.setAll(generalSettingsDict)
+	try:
+		if os.path.isfile(settingsFile):
+			with open(settingsFile,"r") as jr:
+				jsonstr = jr.read()
+				generalSettingsDict = json.loads(jsonstr)
+				main.PM.setAll(generalSettingsDict)
+	except Exception as e:
+		main.writeError(f"Error reading program settings from \"{settingsFile}\".")
+		main.writeError(str(e))
+		return False
 
 def saveProgramSettings(main):	#save is called only when you manually change the settings, otherwise it just uses the defautls (?)
 	generalSettingsDict = main.PM.getDict(tag="general")
 	settingsFile = os.path.join(main.execPath,"Settings.json")
-	with open(settingsFile,"w") as jw:
-		json.dump(generalSettingsDict,jw,indent="\t",sort_keys=True)
+	try:
+		with open(settingsFile,"w") as jw:
+			json.dump(generalSettingsDict,jw,indent="\t",sort_keys=True)
+	except Exception as e:
+		main.writeError(f"Error saving program settings to \"{settingsFile}\".")
+		main.writeError(str(e))
+		return False
 	
 def openSettingsMenu(main):
 	if main.settingsMenu is None:	#If it doesnt exist, create it

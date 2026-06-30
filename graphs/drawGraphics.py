@@ -63,7 +63,7 @@ class SVG_Canvas:	#TODO use grouping better, i.e. <g stroke-width=1>, <g width=3
 		styleDefs=dict()
 		maxval = colourscale[-1][0]
 		colset = set()
-		print(colourscale)
+		#print(colourscale)
 		breakpoint=-1
 		for p,c in colourscale:
 			if p>100:
@@ -73,7 +73,7 @@ class SVG_Canvas:	#TODO use grouping better, i.e. <g stroke-width=1>, <g width=3
 		
 		for i in range(int(breakpoint)):
 			colset.add(getColour(i,colourscale))
-		print(f"[SVG HEAT] Number of unique colours: {len(colset)}")
+		#print(f"[SVG HEAT] Number of unique colours: {len(colset)}")
 		for c in colset:
 			styleDefs["c"+c.removeprefix("#")] = (c,"black",1)
 		self.set_styles(styleDefs)
@@ -262,7 +262,8 @@ def canvas_createXLabel(canvas,x_xLabelCenter,y_xLabelStart,xLabelText,fontsize=
 def canvas_createYLabel(canvas,y_yLabelCenter,x_yLabelStart,yLabelText,fontsize=16,textcolour="black"):
 	canvas.create_text((x_yLabelStart,y_yLabelCenter),text=str(yLabelText),anchor="s",fill=textcolour,font="System "+str(fontsize),angle=90)
 	
-def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,discreetX=False,barcolours=None,lineColour="black",defBarcol="black"):
+def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,discreetX=False,barcolours=None,lineColour="black",defBarcol="black",
+			highlightpos=set(),highlightColour="#ff00ff"):
 	#data = [x,+,-] or [x,+,-,+,-]
 	#first +,- is black/background, second is drawn ontop ~~~~
 	#colouring is same but colour insted of yvalue
@@ -310,6 +311,16 @@ def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_da
 				bar = canvas.create_line(x1,y1,x2,y2,fill=barcolours[i][j-1][0],width=barwidth)
 			posBars[j-1] = bar
 		bars[i] = posBars
+	
+	for i in highlightpos:
+		xcenter = x_dataStart+(data[i][0]-xmin)*xdataToPix
+		if discreetX:
+			xcenter+=xdataToPix/2
+		x1 = xcenter - graph.barradius
+		x2 = xcenter + graph.barradius
+		y1 = y_dataStart
+		y2 = y_dataStart+graph.y_dataSpace
+		canvas.create_rectangle(x1,y1,x2,y2,fill="None",outline=highlightColour)
 	return bars
 
 def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,linewidth=2,lineColours=None,discreetX=False):
@@ -331,7 +342,8 @@ def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_d
 		lines[j-1] = canvas.create_line(coords,fill=lineColours[j-1],width=linewidth)
 	return lines
 
-def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,pointRadius=10,discreetX=False,fillColour="#000000"):
+def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,pointRadius=10,discreetX=False,fillColour="#000000",
+				highlightpos=set(),highlightColour="#ff00ff"):
 	points = [None]*len(data)
 	
 	xdataToPix = x_dataSpace/(xmax-xmin)
@@ -355,7 +367,8 @@ def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_
 	for i,point in enumerate(data):
 		xcenter = x_dataStart+(point[1]-xmin)*xdataToPix
 		ycenter = ybase-(point[2]-ymin)*ydataToPix
-		point = canvas.create_circle(xcenter,ycenter,pointRadius,fill=fillColour,outline="",outlineThickness=outlineThickness)
+		outline = "" if not i in highlightpos else highlightColour
+		point = canvas.create_circle(xcenter,ycenter,pointRadius,fill=fillColour,outline=outline,outlineThickness=outlineThickness)
 		points[i] = (point,xcenter,ycenter)	#(ovalObject,xcenter,ycenter)	#for tkinter canvas
 	return points
 
@@ -399,7 +412,8 @@ def canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y
 	return cells
 
 def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphType=None,colourscale=None,scaleFactor=1,fontMultiplier=1.0,
-			xlabel=None,ylabel=None,legend=None,x_canvasOffset=0,y_canvasOffset=0,drawBorder=False,pointRadius=10):
+			xlabel=None,ylabel=None,legend=None,x_canvasOffset=0,y_canvasOffset=0,drawBorder=False,pointRadius=10,
+			highlightpos=set(),highlightColour="#ff00ff"):
 	
 	canvas.open_group()
 	if drawBorder:
@@ -543,7 +557,8 @@ def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphTyp
 		dataObjects = canvas_createBars(graph,canvas,
 			data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
 			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
-			discreetX=discreetX,barcolours=barcolours,lineColour=lineColour,defBarcol=graph.styles["default"][0])
+			discreetX=discreetX,barcolours=barcolours,lineColour=lineColour,defBarcol=graph.styles["default"][0],
+			highlightpos=highlightpos,highlightColour=highlightColour)
 	
 	if graphType=="multiLine":
 		if graph.lineColours is None:
@@ -559,7 +574,8 @@ def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphTyp
 		dataObjects = canvas_createPoints(graph,canvas,data,
 			x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
 			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
-			pointRadius=pointRadius,discreetX=discreetX,fillColour=lineColour)
+			pointRadius=pointRadius,discreetX=discreetX,fillColour=lineColour,
+			highlightpos=highlightpos,highlightColour=highlightColour)
 		
 	if graphType=="HEAT":
 		dataObjects = canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,colourscale,axis_x_max)

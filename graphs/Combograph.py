@@ -14,7 +14,7 @@ import gui.functions as fun
 #stores the data, syncs the sizes, distributes them and later displays in gui
 
 class Combograph:
-	def __init__(self,main,title,groupID,graphType=None,legend=None,positionalColouring=None,styles=None,xlab=None,ylab=None,lineColours=None,isScrollGraph=True):
+	def __init__(self,main,title,groupID,graphType=None,legend=None,positionalColouring=None,styles=None,xlab=None,ylab=None,lineColours=None,isScrollGraph=True,fileName=None,tabName=None):
 		
 		#when changing params: just re-draw...? ~ requires checking if the respective Combograph already exists
 		
@@ -27,9 +27,11 @@ class Combograph:
 		#	re-gens IGs + draws them
 		
 		self.title = title
+		self.fileName = title.replace(" ","_") if fileName is None else fileName	
+		self.tabName = title if tabName is None else tabName	
 		self.groupID = groupID	#key for main.outputGroups -> notebook
 		self.main = main
-		#print("[Combo] Creating combograph "+str(self.title))
+		#print(f"[Combo] Creating combograph \"{self.title}\", with fileName \"{self.fileName}\" and tabName \"{self.tabName}\"")
 		
 		self.xlab=xlab
 		self.ylab=ylab
@@ -102,8 +104,8 @@ class Combograph:
 			self.highlightpositions = set()
 			
 		if not axislabels is None and len(axislabels)!=len(data):
-			print(f"\nERROR, length missmatch!: {axislabels}")
-			print(f"{len(axislabels)} {len(data)}")
+			print(f"\n[Combo] ERROR, length missmatch!: {axislabels}")
+			print(f"                   {len(axislabels)} {len(data)}")
 			return
 		for i,(graphName,graphData) in enumerate(data):
 			self.addGraph(graphName,graphData,
@@ -126,6 +128,7 @@ class Combograph:
 	def addGraph(self,graphName,graphData,axislabels=None):
 		self.allGraphData[graphName]=graphData
 		self.axislabels[graphName]=axislabels
+		#print(f"[Combo] Adding sub-graph \"{graphName}\"")
 	
 	def setXLabels(self,xLabels,xLabelSpace):
 		self.xLabels=xLabels
@@ -139,13 +142,13 @@ class Combograph:
 			self.parentnotebook = fun.addOutputGraphicsGroup(main,self.groupID,isScrollGraph=self.isScrollGraph)
 			#print(f"[Combo] generating new Tab {self.groupID}")
 			if self.isScrollGraph:
-				self.comboFrame_base,tabCanvas,self.comboFrame = self.parentnotebook.addScrollTab(self.title)	#inner_frame_style="gBorder.TFrame"
+				self.comboFrame_base,tabCanvas,self.comboFrame = self.parentnotebook.addScrollTab(self.tabName)	#inner_frame_style="gBorder.TFrame"
 			else:
 				self.comboFrame_base = ThemedFrame(self.parentnotebook,style="gBorder.TFrame")
-				self.parentnotebook.add(self.comboFrame_base,text=self.title)
+				self.parentnotebook.add(self.comboFrame_base,text=self.tabName)
 				self.comboFrame = self.comboFrame_base
 			
-			ThemedLabel(self.comboFrame_base,text=self.title+" - "+self.groupID,style="Medium.TLabel").pack(fill="x",anchor="nw",side="top")
+			ThemedLabel(self.comboFrame_base,text=self.title,style="Medium.TLabel").pack(fill="x",anchor="nw",side="top")
 			if self.isScrollGraph:	#addScrollTab requires extra packing to allow for better customisability
 				tabCanvas.pack(fill="both",expand=True,anchor="nw")
 		
@@ -201,12 +204,12 @@ class Combograph:
 			igraph.clearPoint(pos)
 	
 	def clearSelection(self):
-		print("[Combo] Clearing selected points:\n"+str(self.selectedPoints))
+		#print("[Combo] Clearing selected points:\n"+str(self.selectedPoints))
 		for pos in list(self.selectedPoints):
 			self.clearPoint(pos)
 	
 	def clearConnected(self):
-		print("[Combo] Clearing all connected Graphs")
+		#print("[Combo] Clearing all connected Graphs")
 		for comboGraph in self.connectedGraphs:	#self is in connectedGraphs
 			comboGraph.clearSelection()
 	
@@ -240,11 +243,12 @@ class Combograph:
 			xlab,ylab = self.axislabels[graphName]
 			graphLib.canvas_createPlot(self,canvas,graphData,width=graphWidth,height=graphHeight,lineColour=self.main.graphLineColour,graphType=self.graphType,
 				colourscale=colourscale,fontMultiplier=fontMultiplier,
-				xlabel=xlab,ylabel=ylab,legend=legend,x_canvasOffset=0,y_canvasOffset=(graphHeight+10)*i + titleOffset,drawBorder=True,pointRadius=4)
+				xlabel=xlab,ylabel=ylab,legend=legend,x_canvasOffset=0,y_canvasOffset=(graphHeight+10)*i + titleOffset,drawBorder=True,pointRadius=4,
+				highlightpos=self.selectedPoints,highlightColour="#ff00ff")
 		
 		mySVG.append("</svg>")
-		soloExtra = "" if selectedGraphName is None else "_"+selectedGraphName
-		savePath = resultsPath if overridePath else os.path.join(resultsPath,f"{self.groupID}_{self.title}{soloExtra}.svg")
+		soloExtra = "" if (selectedGraphName is None or selectedGraphName=="") else "_"+selectedGraphName
+		savePath = resultsPath if overridePath else os.path.join(resultsPath,f"{self.fileName}{soloExtra}.svg")
 		with open(savePath,"w") as svgw:
 			svgw.write("\n".join(mySVG))
 

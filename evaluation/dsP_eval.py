@@ -15,12 +15,16 @@ def exportGraphs(main):	#TODO move these functions somewhere else
 		return False
 	lg.exportGraphs(main,main.PM.get("exportOverrideWidth"),main.PM.get("exportOverrideHeight"),
 		fontMultiplier=main.PM.get("fontMultiplierSVG"))
+	main.writeLog("...done.")
 	print("\n[siGUI] ...done.")
 	
 def displayGraphs(main):
 	print("\n[siGUI] Displaying graphs")
 	main.writeLog("\n-------------------------------------------------------\nDisplaying graphs")
-	
+	if main.comboGraphs is None or len(main.comboGraphs.keys())==0:
+		main.writeWarning("Nothing to display")
+		return False
+		
 	if not main.PM.validateTags(["graphics"]):
 		main.writeWarning("Error validating graphic parameters.")
 		return False
@@ -105,10 +109,10 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 	main.writeLog("\n-------------------------------------------------------\nLoading data")
 	
 	grouping = dict()
-	print(f"[dsP eval] {selectedLibIDs}")
+	#print(f"[dsP eval] {selectedLibIDs}")
 	for libID in selectedLibIDs:
 		try:
-			print(f"[dsP eval] {main.IM.getLib(libID).getCountfiles()}")
+			#print(f"[dsP eval] {main.IM.getLib(libID).getCountfiles()}")
 			for target in main.IM.getLib(libID).getCountfiles():	#target = (bundleID,psname)
 				if not target[1] == main.IM.getLib(libID).ppt:continue	#only draw the currently selected Parameterset
 				if not target in grouping:grouping[target] = list()
@@ -116,12 +120,12 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 		except:
 			print(f"Error, problem with finding targets for {libID}: {main.IM.getLib(libID).getCountfiles()}")
 		
-	print(f"\n[dsP eval] Groups: \n"+"\n".join([f"{key}:\t{value}" for key,value in sorted(grouping.items())])+"\n")
+	#print(f"\n[dsP eval] Groups: \n"+"\n".join([f"{key}:\t{value}" for key,value in sorted(grouping.items())])+"\n")
 	for (bundleID,psname),libIDs in sorted(grouping.items()):
 		
 		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
 		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
-		print(f"[dsP eval] Countfile: {countFile}")
+		#print(f"[dsP eval] Countfile: {countFile}")
 		countData = lg.loadCounts(main,countFile,libIDs,main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
 		if countData is None or countData is False: 
 			print("Error, data is None!")
@@ -137,7 +141,8 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 					if feature[4] == "Guide" or feature[4] == "Passenger":
 						siRNAPos[strand][feature[0]]=feature[1]
 					else:
-						print(feature[1])
+						#print(feature[1])
+						pass
 		for dic in wantedgraphs:
 			dic["mainTargetSeqID"] = main.IM.getTarget(bundleID).mainSeqID	#mainTarget
 			dic["bundleID"] = bundleID	#mainTarget

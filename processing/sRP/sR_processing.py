@@ -169,7 +169,9 @@ def createIndex(main,psname,libIDs,force=False):
 	grouping = dict()
 	for libID in libIDs:
 		try:
-			target = main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).bundleID
+			if len(main.IM.getLib(libID).mapTargets)==0:continue
+			target = main.IM.getLib(libID).mapTargets[0]
+			if target=="-":continue	#dont map libraries that dont have a target set
 		except:
 			print(f"Error, problem with finding targets for {libID}: {main.IM.getLib(libID).mapTargets}; {main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).mainSeqID}")
 		if not target in grouping:grouping[target] = list()
@@ -226,7 +228,9 @@ def mapReads(main,psname,libIDs,force=False):
 		grouping = dict()
 		for libID in libIDs:
 			try:
-				target = main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).bundleID
+				if len(main.IM.getLib(libID).mapTargets)==0:continue
+				target = main.IM.getLib(libID).mapTargets[0]
+				if target=="-":continue	#dont map libraries that dont have a target set
 				isPaired = main.IM.getLib(libID).isPairedEnd()
 			except:
 				print(f"""[sRP Map] Error, problem with finding targets for {libID}: {main.IM.getLib(libID).mapTargets}; 
@@ -274,14 +278,14 @@ def mapReadsPipe(main,parameters,group,force=False):
 		command += os.path.join(indexDir,str(indexID))+"\" -U \"$inFastq\" --no-unal --very-sensitive"
 		#command += " --score-min C,0,0"	#prevents mismatches and gaps
 		command += f" | samtools view -@ {int(int(parameters["threadsVar"])/4)} -bS -"
-		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/2)} -o \"$outBam\""
+		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/4)} -o \"$outBam\""
 		commands.append(command)
 	elif bowtieversion==1:	#bowtie1
 		indexFile = f"{indexID}.1.ebwt"
 		command = f"bowtie {extraBuffer} -p {int(int(parameters["threadsVar"])/2)} -x \""
 		command += os.path.join(indexDir,str(indexID))+"\" -q \"$inFastq\" --no-unal --best --tryhard -n 3 --chunkmbs 512 -S"
 		command += f" | samtools view -@ {int(int(parameters["threadsVar"])/4)} -bS -"
-		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/2)} -o \"$outBam\""
+		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/4)} -o \"$outBam\""
 		commands.append(command)
 	
 	commands.append("samtools idxstats \"$outBam\" > \"$idxfile\"")
@@ -317,7 +321,9 @@ def countReads(main,psname,libIDs,force=False):
 		grouping = dict()
 		for libID in libIDs:
 			try:
-				target = main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).bundleID
+				if len(main.IM.getLib(libID).mapTargets)==0:continue
+				target = main.IM.getLib(libID).mapTargets[0]
+				if target=="-":continue	#dont count libraries that havent been mapped to a target
 			except:
 				print(f"""[sRP Count] Error, problem with finding targets for {libID}: {main.IM.getLib(libID).mapTargets}; 
 					{main.IM.getTarget(main.IM.getLib(libID).mapTargets[0]).mainSeqID}""")
@@ -350,7 +356,7 @@ def countReadsPipe(main,parameters,group,force=False):
 		#doesnt exist *yet*..., but should soon if weve made it this far
 		#so the settings need to be saved or at least the libraries updated
 	
-	command = f"python3 {os.path.join(parameters["execPath"],"processing/sRP/countReads.py")} '$in' '$outfile' '{mainTarget}:1-{mainlength}'"
+	command = f"python3 '{os.path.join(parameters["execPath"],"processing/sRP/countReads.py")}' '$in' '$outfile' '{mainTarget}:1-{mainlength}'"
 	command += f" --minLength {parameters["sRP-count-minLen"]} --maxLength {parameters["sRP-count-maxLen"]}"
 	commands = [command]
 	

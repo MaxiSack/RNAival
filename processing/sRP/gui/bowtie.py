@@ -19,7 +19,7 @@ def add_sRP_bowtie_GUI(main,parent):
 		).pack(fill="x",expand=False,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	mapSettingsFrame = ThemedFrame(bowtieBaseFrame)
 	mapSettingsFrame.pack(fill="x",expand=False,anchor="nw",padx=main.frameBorderSize,pady=main.frameBorderSize)
-	ThemedLabel(mapSettingsFrame,text="Step 3.1: Create an index of the target RNA (using bowtielbuild)",anchor="w").grid(column=0,row=0,columnspan=3,sticky="ew")
+	ThemedLabel(mapSettingsFrame,text="Step 3.1: Create an index of the target RNA (using bowtie-build)",anchor="w").grid(column=0,row=0,columnspan=3,sticky="ew")
 	ThemedLabel(mapSettingsFrame,text="Extra parameters:",anchor="w").grid(column=0,row=1,sticky="ew")
 	addThemedEntry(main,mapSettingsFrame,textvariable=main.PM.add("sRP-index-extraParams","text","",
 		"Free text ?","Extra parameters for bowtiebuild.",tag="sRP-index")).grid(column=1,row=1,columnspan=2,sticky="ew",padx=main.frameBorderSize)

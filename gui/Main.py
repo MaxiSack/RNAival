@@ -53,6 +53,7 @@ class Main():
 		#Program settings
 		self.PM.add("threadsVar","int",16,"Threads error","Number of threads used by external tools.",tag="general")
 		self.PM.add("loadLastProjectOnStartup","bool",True,"Bool error","Wether to load the last project on startup or not.",tag="general")
+		self.PM.add("showGraphsOnProjectLoad","bool",True,"Bool error","Wether to generate the graphs on project load or not.",tag="general")
 		self.PM.add("defaultTheme","text","light","Theme select error","Which theme the application should use by default.",tag="general")
 		
 		functions.loadProgramSettings(self)
@@ -73,7 +74,9 @@ class Main():
 		self.PM.reset(notTags=["general"])
 		self.PM.clearPS()
 		self.IM.reset()
+		self.resetTextOutput()
 		updateTargetListFrame(self)
+		functions.clearGraphics(self)
 		print("[Main] done.\n")
 	def saveProgramSettings(self):
 		functions.saveProgramSettings(self)
@@ -89,17 +92,6 @@ class Main():
 		return self.outputGraphicsNotebook
 	def showGraphicsTab(self):
 		self.mainNotebook.add(self.graphicsFrame)
-	def resetGraphicsOutput(self):
-		self.showGraphicsTab()
-		for tab in list(self.outputGraphicsNotebook.tabs()):
-			self.outputGraphicsNotebook.forget(tab)
-	def mouseWheelScroll(self,event):	#TODO re-implement
-		#check if the graphic output is active
-		if self.mainNotebook.index(self.mainNotebook.select())==self.graphicsTabIndex:
-			for canvas in self.outputGraphicsScrollCanvasList:	#Doesnt work anymore
-				if event.num==5:canvas.yview_scroll(1,"units")
-				elif event.num==4:canvas.yview_scroll(-1,"units")
-		return "break"
 	def showTextOutputTab(self):
 		self.mainNotebook.add(self.outputTextField)
 	def writeTextOutput(self,text):
@@ -110,16 +102,6 @@ class Main():
 		self.outputTextField["state"]="normal"
 		self.outputTextField.delete('1.0',"end")
 		self.outputTextField["state"]="disabled"
-	def fitCanvasWidthGraph(self,canvas):
-		boundBox = canvas.bbox("all")
-		boundsAd = (boundBox[0],boundBox[1],boundBox[2],max(boundBox[3],self.mainNotebook.winfo_height()-100))	#2 because borders...
-		canvas.configure(scrollregion = boundsAd)
-	
-	def fitCanvasWidth(self):
-		#boundBox = self.paramCanvas.bbox("all")
-		#print("Canvas bounding box: "+str(boundBox))
-		#self.paramCanvas.configure(width = boundBox[2])
-		pass
 	def saveSettings(self):	#Dummy function
 		functions.saveSettings(self)
 	def loadDataIntoGUI(self):
@@ -148,6 +130,7 @@ class Main():
 		main.pipeStartTime = time.time()
 		usedParameterSets = set()
 		for libID,lib in main.IM.getLibraries().items():
+			if lib.ppt=="-":continue
 			usedParameterSets.add(lib.ppt)	#only process the currently selected Parameterset
 		print(f"[main run] Found PS: {usedParameterSets}")
 		neededModules = set()

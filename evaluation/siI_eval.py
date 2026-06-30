@@ -89,13 +89,13 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		
 		if len(graphList) ==1:
 			# ------------- Abundance Bar graph -------------------
-			graphNameA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR",isScrollGraph=False)
+			graphKeyA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
+			graphA = Combograph(main,graphKeyA,targetBundle.mainSeqID+"_"+psname,graphType="BAR",isScrollGraph=False)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			graphA.addData(graphList,globalYScale=True,axislabels=axisLabels)
-			main.comboGraphs[graphNameA+"_"+psname] = graphA
-			print(f"[siI eval] Added {graphNameA} to comboGraphs.")
+			main.comboGraphs[graphKeyA+"_"+psname] = graphA
+			#print(f"[siI eval] Added {graphKeyA} to comboGraphs.")
 			
 			maxCount = max([graphList[0][1][i][1] for i in range(len(points))])
 			for i in range(len(points)):
@@ -103,19 +103,23 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			graphA.addPointDescriptor(descriptorFields,pointDescriptor)	#so that textoutput appears when a bar is selected
 		elif len(graphList) ==2:
 			# ------------- Abundance Bar2 graph -------------------
-			graphNameA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphA = Combograph(main,graphNameA,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False)
+			graphKeyA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"		#Used for dictionary key and filename
+			graphTitleA = f"{pairLabel} - Abundance: l{length}, s{strand}, {regionStart}-{regionEnd}"	#used as GUI and SVG graph title
+			tabNameA = f"{pairLabel} - Abundance"											#Used as tab name
+			graphA = Combograph(main,graphTitleA,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False,fileName=graphKeyA,tabName=tabNameA)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			counts2 = [(graphList[0][1][i][0],graphList[0][1][i][1],graphList[1][1][i][1])
 						 for i in range(len(graphList[0][1]))]
-			counts2Graph = (graphList[0][0]+"_count2",counts2)
-			graphA.addData([counts2Graph],axislabels=[("5' Position","Count")])
-			main.comboGraphs[graphNameA+"_"+psname] = graphA
+			counts2Graph = ("",counts2)	#single graph gets no extra title
+			graphA.addData([counts2Graph],axislabels=[("5' Position","Abundance (enriched: +, control: -)")])
+			main.comboGraphs[graphKeyA+"_"+psname] = graphA
 			
 			# ------------- Volcano-like scatter graph -------------------
-			graphNameV = f"Foldchange_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphV = Combograph(main,graphNameV,targetBundle.mainSeqID+"_"+psname,graphType="SCATTER",isScrollGraph=False)
+			graphKeyV = f"Foldchange_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
+			graphTitleV = f"{pairLabel} - Foldchange: l{length}, s{strand}, {regionStart}-{regionEnd}"
+			tabNameV = f"{pairLabel} - Foldchange"
+			graphV = Combograph(main,graphTitleV,targetBundle.mainSeqID+"_"+psname,graphType="SCATTER",isScrollGraph=False,fileName=graphKeyV,tabName=tabNameV)
 			graphV.bundleID=bundleID
 			graphV.psname=psname
 			points = [(graphList[0][1][i][0],log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
@@ -132,10 +136,10 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			#logPoolGraph = (graphList[0][0]+"_log",logPoolCounts)
 			#graphV.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],
 			#	axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
-			graphV.addData([(graphList[0][0]+"_Volcano",points)],	#Only show volcano
+			graphV.addData([("",points)],	#Only show volcano
 				axislabels=[("Log2 Foldchange","Log2 Difference")])
 			
-			main.comboGraphs[graphNameV+"_"+psname] = graphV
+			main.comboGraphs[graphKeyV+"_"+psname] = graphV
 			
 			# ------------- fill out remaining fields -------------------
 			for i in range(len(points)):
@@ -172,19 +176,19 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 						pointDescriptor[i][-1]  if pointDescriptor[i][-1]>0 else 0,
 						-pointDescriptor[i][-1] if pointDescriptor[i][-1]<0 else 0
 						) for i in range(len(graphList[0][1]))]
-				scoreGraph = (graphList[0][0]+"_score",scoreCounts)
+				scoreGraph = ("",scoreCounts)
 				graphS.addData([scoreGraph],axislabels=[("5' Position","Score")])
 				main.comboGraphs[graphNameS+"_"+psname] = graphS
 				
 				# ---- connect graphs for interactivity -----
-				#main.comboGraphs[graphNameA+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameS+"_"+psname])
-				#main.comboGraphs[graphNameV+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameS+"_"+psname])
-				#main.comboGraphs[graphNameS+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameA+"_"+psname])
-				#main.comboGraphs[graphNameS+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameV+"_"+psname])
+				#main.comboGraphs[graphKeyA+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameS+"_"+psname])
+				#main.comboGraphs[graphKeyV+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameS+"_"+psname])
+				#main.comboGraphs[graphNameS+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyA+"_"+psname])
+				#main.comboGraphs[graphNameS+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyV+"_"+psname])
 			
 			# ---- connect graphs for interactivity -----
-			main.comboGraphs[graphNameA+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameV+"_"+psname])
-			main.comboGraphs[graphNameV+"_"+psname].addConnectedGraph(main.comboGraphs[graphNameA+"_"+psname])
+			main.comboGraphs[graphKeyA+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyV+"_"+psname])
+			main.comboGraphs[graphKeyV+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyA+"_"+psname])
 		
 		bestSiRNAsRev = sorted(pointDescriptor, key = lambda x:x[-1],reverse=True)
 		filename = os.path.join(countDir,pairLabel+f"_siRNA-candidates_l{length}-s{strand}_{regionStart}-{regionEnd}.tsv")

@@ -2,6 +2,8 @@ import json
 import os
 import os.path
 from pathlib import Path
+import re
+
 from tkinter import BooleanVar
 from tkinter import StringVar
 
@@ -11,7 +13,7 @@ falseList = [False,"false","f","no","y",0,"0"]	#lowercase inputs accepted for Fa
 nucset={"A","C","G","T","U","N"}
 idset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","_","-"}
 intListset = {"1","2","3","4","5","6","7","8","9","0"," ",","}
-hexset = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0"}
+hexcodePattern = re.compile("^#([0-9a-fA-F]){6}$")
 
 class ParameterManager():
 	def __init__(self,main):
@@ -186,12 +188,14 @@ class ParameterManager():
 					self.parameterDict[key][0].set(self.parameterDict[key][2])
 			else:
 				for ttag in tags:
+					if not ttag in self.parametertags: continue
 					for key in self.parametertags[ttag]:
 						self.parameterDict[key][0].set(self.parameterDict[key][2])
 		else:
 			print(f"[PM] Reseting everything except {notTags}")
 			dontResetKeys = set()
 			for ttag in notTags:
+				if not ttag in self.parametertags: continue
 				for key in self.parametertags[ttag]:
 					dontResetKeys.add(key)
 			for key in self.parameterDict.keys():
@@ -207,6 +211,7 @@ class ParameterManager():
 				valueDict[key] = self.get(key)
 		else:
 			for ttag in tags:
+				if not ttag in self.parametertags: continue
 				for key in self.parametertags[ttag]:
 					valueDict[key] = self.get(key)
 		return valueDict
@@ -215,6 +220,7 @@ class ParameterManager():
 		#print(f"\n\n[PM] Checking parameters for tags {tags}!\n\n")
 		allGood = True
 		for ttag in tags:
+			if not ttag in self.parametertags: continue
 			for key in self.parametertags[ttag]:
 				if not self.validateParameter(key):allGood = False
 		return allGood
@@ -271,17 +277,9 @@ class ParameterManager():
 		elif vartype=="path":
 			pass
 		elif vartype=="colour":
-			if len(value)!=7:
+			if not hexcodePattern.match(value):
 				error=True	#not correct format
-				self.main.writeError("ERROR, not correct format!")	#TODO maybe use regex istead
-			if not value.startswith("#"):
-				error=True	#not correct format
-				self.main.writeError("ERROR, not correct format #!")
-			for char in value.lower()[1:]:
-				if not char in hexset:
-					error=True	#other chars in hex-colour
-					self.main.writeError("ERROR, other chars in hex-colour! "+str(char))
-					break
+				self.main.writeError("ERROR, Colours need to be in Hex-code! (e.g. 'black' = '#000000', 'white' = '#ffffff')")
 		elif vartype=="unknown":
 			print(f"[PM] Warning, Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")
 			self.main.writeWarning(f"Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")

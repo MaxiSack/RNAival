@@ -41,11 +41,11 @@ def loadData(main,export=True,gui=True):
 	#main.PM.get("siI-siRNAlength")
 	#main.PM.get("siI-strand")
 	params = main.PM.getDict(tag="siI")
-	print(f"\n{params}\n")
+	#print(f"\n{params}\n")
 	return loadDataIntoGUI(main,libPairs,params,export=export,gui=gui)
 
 def deleteLibIDPair(main,index):
-	print(f"[siI GUI] Deleting libID-pair {index}: {main.pairList[index][4].get()}")
+	#print(f"[siI GUI] Deleting libID-pair {index}: {main.pairList[index][4].get()}")
 	main.pairList[index][0].destroy()
 	main.pairList[index]=None
 
@@ -96,7 +96,7 @@ def updatePairLibSelection(main,pair,selectedTPS,positiveLibsFrame,negativeLibsF
 def addPair(main,pairLoad=None,updateView=True):
 	TPSlist = main.IM.getTPSList()
 	if len(TPSlist)==0:
-		main.writeError("Error, please run the pipeline befor selecting siI pairs.")
+		main.writeError("Error, please run the pipeline before selecting siI pairs.")
 		return
 	#print(f"[siI GUI] Adding pair: {pairLoad}")
 	pairFrameBase = ThemedFrame(main.pairListFrame,style="wBorder.TFrame")

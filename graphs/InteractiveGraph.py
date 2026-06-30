@@ -13,7 +13,7 @@ import graphs.drawGraphics as graphLib
 
 class InteractiveGraph:
 	def __init__(self,main,parent,canvasHeight,title,safePath,colouring=None,exportFontsize=12,styles=None,positionalColouring=None,graphType="unset",
-			parentCombo=None,xlab=None,ylab=None,lineColours=None):
+			parentCombo=None,xlab=None,ylab=None,lineColours=None,fileSuffix=None):
 		#print(f"\n[IG] Creating new interactive graph {title}, Graph-height: "{height}")
 		
 		#---------------- object values ----------------
@@ -22,12 +22,13 @@ class InteractiveGraph:
 		self.plotWidth = 0
 		self.plotHeight = 0
 		self.title = title
-		self.graphName = title
+		self.fileSuffix = title.replace(" ","_") if fileSuffix is None else fileSuffix	#appended to the comboFilename for svg export
 		self.positionalColouring = positionalColouring
 		self.safePath = safePath
 		self.pointRadius = 10
 		self.parentCombo = parentCombo
 		self.graphType = graphType
+		#print(f"[IG] Creating IG of parent \"{self.parentCombo.title}\" with title \"{self.title}\" and fileSuffix \"{self.fileSuffix}\"")
 		
 		#---------------- IG GUI def ----------------
 		graphFrame = ThemedFrame(parent)
@@ -80,7 +81,10 @@ class InteractiveGraph:
 		self.globalYScale=False
 		
 	def saveAsFile(self):
-		resultsPath = asksaveasfilename(initialfile=os.path.join(self.safePath,self.title+".svg"),filetypes=[("Scalable Vector Graphic",".svg")],initialdir=self.safePath)
+		
+		soloExtra = "" if self.fileSuffix is "" else "_"+self.fileSuffix
+		savePath = os.path.join(self.safePath,f"{self.parentCombo.fileName}{soloExtra}.svg")
+		resultsPath = asksaveasfilename(initialfile=savePath,filetypes=[("Scalable Vector Graphic",".svg")],initialdir=self.safePath)
 		self.parentCombo.exportAsSVG(resultsPath,self.plotWidth,self.plotHeight,1,selectedGraphName=self.title,overridePath=True)
 	
 	def setXLabels(self,xlabels):

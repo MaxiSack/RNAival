@@ -178,12 +178,12 @@ def loadData(main,export=True,gui=True):
 	if not wantedgraphs: 
 		main.writeError("Error with graph definitions!")
 		return False
-	print("[siGUI Debug] wanted graphs:\n"+str("\n".join(["\t"+str(graph) for graph in wantedgraphs])))
+	#print("[siGUI Debug] wanted graphs:\n"+str("\n".join(["\t"+str(graph) for graph in wantedgraphs])))
 	
 	
 	# ------------------- Library Selection -----------------------
 	selectedLibIDs = [libID for libID,lib in main.IM.getLibraries().items() if "dsP" in lib.evalTypes]
-	print(f"Selected Libraries:\n{selectedLibIDs}")
+	#print(f"Selected Libraries:\n{selectedLibIDs}")
 	
 	highlightStyles=getColours(main)
 	return loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,export=export,highlightStyles=highlightStyles,gui=gui)

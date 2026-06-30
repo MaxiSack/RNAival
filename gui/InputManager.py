@@ -59,7 +59,7 @@ class TargetSequenceBundle():
 		self.mainSequence = None
 	def loadAnnotation(self,main=None):	#load annotation from mainTarget
 		if not self.mainTarget.endswith(".embl"):return
-		print(f"[IM TB] Loading {self.mainTarget}")
+		#print(f"[IM TB] Loading {self.mainTarget}")
 		self.mainSeqID,self.mainSequence,self.annotation = seqIO.loadEMBL(self.mainTarget,main=main)
 	def loadMainTarget(self,main=None):
 		if self.mainTarget.endswith(".embl"):
@@ -96,7 +96,7 @@ class InputManager():
 		self.siiPairs = list()
 		self.availableTPS = dict()
 	
-	def addLib(self,path,path_r2=None,ppt="",label="",comment=""):
+	def addLib(self,path,path_r2=None,ppt="-",label="",comment=""):
 		#seqID = os.path.basename(path).removesuffix(".fasta.gz").removesuffix(".fasta").removesuffix(".fa")
 		libID = getLibName(path)
 		if label == "":label=libID
@@ -115,11 +115,11 @@ class InputManager():
 		#if not ppt is None:self.libDict[libID].ppt=ppt
 		if not label is None:self.libDict[libID].label=label
 		if not comment is None:self.libDict[libID].comment=comment
-		if not psname is None:
+		if not psname is None and not psname=="-":
 			self.libDict[libID].addPS(psname)
 			self.libDict[libID].ppt=psname
-		if not mapTarget is None:self.addMapTarget(libID,mapTarget)
-		if not evalType is None:self.addEvalType(libID,evalType)
+		if not mapTarget is None and not mapTarget=="-":self.addMapTarget(libID,mapTarget)
+		if not evalType is None and not evalType=="-":self.addEvalType(libID,evalType)
 		
 	def getLib(self,libID):		#user selects list of libIDs in GUI, then this is used to get the paths
 		return self.libDict[libID]
@@ -214,7 +214,7 @@ class InputManager():
 		self.libDict[libID].evalTypes.remove(evalType)
 	
 	def addSIIPair(self,libPos,libNeg,label,TPS,regionStart,regionEnd):
-		print(f"Adding siIPair {(libPos,libNeg,label,TPS,regionStart,regionEnd)}")
+		#print(f"Adding siIPair {(libPos,libNeg,label,TPS,regionStart,regionEnd)}")
 		self.siiPairs.append((libPos,libNeg,label,TPS,regionStart,regionEnd))
 	def getSIIPairs(self):
 		return self.siiPairs

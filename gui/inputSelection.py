@@ -30,7 +30,7 @@ from gui.ScrollableFrame import ScrollableFrame
 import iostuff.seqFiles as seqIO
 
 def findFilesInDir(main):
-	inputFileDir = askdirectory(title="Select directory",initialdir=main.PM.get("projectPath"))	#returns None or "" or () if canceled
+	inputFileDir = askdirectory(title="Select directory",initialdir=main.PM.get("projectPath"),mustexist=True)	#returns None or "" or () if canceled
 	if inputFileDir is None or inputFileDir == "":return	#canceled selection
 	if not isinstance(inputFileDir,str):return	#other cases
 	files = os.listdir(inputFileDir)
@@ -53,12 +53,11 @@ def updateSeqFiles(main):	#Update the internally stored libaries with the select
 	print("[input] Saving changes to seqFileList")
 	starttime = time.time()
 	for libKey,fields in main.seqFileDict.items():
-		targetValue = fields["mapTargets"].get()
-		if targetValue == "-":
-			main.writeWarning(f"Warning, no target selected for library {libKey}")
-			continue
-		main.IM.updateLib(libKey,ppt=None,label=fields["label"].get(),comment=fields["comment"].get(),
-			psname=fields["PS"].get(),mapTarget=main.IM.getTarget(targetValue).bundleID,evalType=fields["evalTypes"].get())
+		if fields is None:
+			main.IM.removeLib(libKey)
+		else:
+			main.IM.updateLib(libKey,ppt=None,label=fields["label"].get(),comment=fields["comment"].get(),
+				psname=fields["PS"].get(),mapTarget=fields["mapTargets"].get(),evalType=fields["evalTypes"].get())
 			#fields["ppt"]	#remove this and make sure that parametersets are split by ppt and evaltype
 	#print(f"[input][Debug] updateSeqFiles took {time.time()-starttime} seconds\n")
 
@@ -66,19 +65,28 @@ def saveSeqFiles(main):
 	updateSeqFiles(main)
 	updateSeqFileList(main)
 
-def deleteLibrary(main,key):
-	print(f"[input] Deleting library {key}")
-	updateSeqFiles(main)	#save changes
-	main.IM.removeLib(key)	#remove lib
-	updateSeqFileList(main)	#update list
+def deleteLibrary(main,libKey):
+	print(f"[input] Deleting library {libKey}")
+	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
+	for widget in main.seqFileDict[libKey]["widgets"]:
+		try:main.styleman.registredOptionMenus.remove(widget)	#remove widgets from styleman
+		except:pass
+		widget.destroy()
+	main.seqFileDict[libKey] = None	#only delete GUI elements and GUI-based entries, dont save to IM yet (allows undoing if you dont "save changes")
+	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
+	
+	#updateSeqFiles(main)	#save changes
+	#main.IM.removeLib(libKey)	#remove lib
+	#updateSeqFileList(main)	#update list
 
 def updateSeqFileList(main):
 	print("[input] Updating input file list")
+	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
 	starttime = time.time()
 	#updateSeqFiles(main)
 	#print(main.IM.toString())
 	main.seqFileDict = dict()
-	for child in main.seqFileListFrame.winfo_children():child.destroy()	#delete all existing widgeds, then re-add them	#TODO instead update them
+	for child in main.seqFileListFrame.winfo_children():child.destroy()	#delete all existing widgeds, then re-add them
 	
 	row=0
 	desc=["Label","Comment","Pre-processing","Targets","Evaluation"]
@@ -87,6 +95,7 @@ def updateSeqFileList(main):
 	fieldKeys=["label","comment","PS","mapTargets","evalTypes"]
 	#print(f"[Input] PS-keys: {main.PM.getParameterSetKeys()}")
 	targetLabels = [main.IM.getTarget(bundleID).bundleID for bundleID in main.mapTargets]
+	if len(targetLabels)==0:targetLabels=["-"]
 	PSkeys = main.PM.getParameterSetKeys()
 	psCount = len(PSkeys)
 	#print(f"[Input] Target-labels: {targetLabels}")
@@ -94,19 +103,24 @@ def updateSeqFileList(main):
 	lasttime = time.time()
 	for libKey,library in sorted(main.IM.getLibraries().items(),key=lambda x:x[0]):
 		row+=1
+		rowWidgets = list()
 		libVals = library.serialize()
 		main.seqFileDict[libKey] = dict()
-		for column,fkey in enumerate(fieldKeys):	#TODO give dropdowns a command to update the affected library immediatly
+		for column,fkey in enumerate(fieldKeys):
+			ref = None
 			if fkey == "libID":
-				ThemedLabel(main.seqFileListFrame,text=libVals[fkey],anchor="w").grid(column=column,row=row,sticky="ew")
+				ref = ThemedLabel(main.seqFileListFrame,text=libVals[fkey],anchor="w")
+				ref.grid(column=column,row=row,sticky="ew")
 			if fkey == "label":
 				labelVar = StringVar(value=libVals[fkey])
 				main.seqFileDict[libKey][fkey] = labelVar
-				ThemedEntry(main.seqFileListFrame,textvariable=labelVar).grid(column=column,row=row,sticky="ew")
+				ref = ThemedEntry(main.seqFileListFrame,textvariable=labelVar)
+				ref.grid(column=column,row=row,sticky="ew")
 			if fkey == "comment":
 				commentVar = StringVar(value=libVals[fkey])
 				main.seqFileDict[libKey][fkey] = commentVar
-				ThemedEntry(main.seqFileListFrame,textvariable=commentVar).grid(column=column,row=row,sticky="ew")
+				ref = ThemedEntry(main.seqFileListFrame,textvariable=commentVar)
+				ref.grid(column=column,row=row,sticky="ew")
 			if fkey == "PS":
 				#print(f"[Input] PS-keys: {keys}")
 				if psCount < 1:	#shouldnt happen, since sRP has a default PS
@@ -116,49 +130,52 @@ def updateSeqFileList(main):
 				psVar = StringVar(value=PSkeys[0] if libVals["ppt"]=="" else libVals["ppt"])	#new libraries have their ppt="" until something is selected and saved
 				main.seqFileDict[libKey][fkey] = psVar
 				if psCount==1:
-					ThemedLabel(main.seqFileListFrame,text=psVar.get(),anchor="w").grid(column=column,row=row,sticky="ew")
+					ref = ThemedLabel(main.seqFileListFrame,text=psVar.get(),anchor="w")
+					ref.grid(column=column,row=row,sticky="ew")
 				else:
-					mm=OptionMenu(main.seqFileListFrame,psVar,*PSkeys)
-					main.styleman.registredOptionMenus.append(mm)	#TODO causes problems when re-gening!! (because previous additions arent removed) 
-											#~will be fixed fixed when widgets are updated instead of deleted
-											# just also update the "delete library" command with this!
-					mm.grid(column=column,row=row,sticky="ew")
+					ref = OptionMenu(main.seqFileListFrame,psVar,*PSkeys)
+					main.styleman.registredOptionMenus.append(ref)
+					ref.grid(column=column,row=row,sticky="ew")
 					#TODO make function in styleman to create (and update) menus !!!
-					mm.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+					ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 						activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-					mm["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+					ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 						activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 			
 			if fkey == "mapTargets":
 				targetVar = StringVar(value="-")
 				if len(libVals[fkey])>0:targetVar.set(main.IM.getTarget(libVals[fkey][0]).bundleID)
 				main.seqFileDict[libKey][fkey] = targetVar
-				if len(targetLabels)==0:continue
-				mm2=OptionMenu(main.seqFileListFrame,targetVar,*targetLabels)	# Target label is now also their ID
-				main.styleman.registredOptionMenus.append(mm2)
-				mm2.grid(column=column,row=row,sticky="ew")
-				mm2.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+				ref = OptionMenu(main.seqFileListFrame,targetVar,*targetLabels)	# Target label is now also their ID
+				main.styleman.registredOptionMenus.append(ref)
+				ref.grid(column=column,row=row,sticky="ew")
+				ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 					activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-				mm2["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+				ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 					activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 			
 			if fkey == "evalTypes":
 				evalVar = StringVar(value="-")
 				if len(libVals[fkey])>0:evalVar.set(libVals[fkey][0])
 				main.seqFileDict[libKey][fkey] = evalVar
-				mm2=OptionMenu(main.seqFileListFrame,evalVar,*main.evalTypes)
-				main.styleman.registredOptionMenus.append(mm2)
-				mm2.grid(column=column,row=row,sticky="ew")
-				mm2.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+				ref = OptionMenu(main.seqFileListFrame,evalVar,*main.evalTypes)
+				main.styleman.registredOptionMenus.append(ref)
+				ref.grid(column=column,row=row,sticky="ew")
+				ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 					activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-				mm2["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+				ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 					activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+			rowWidgets.append(ref)
+		ref = ThemedButton(main.seqFileListFrame,image=main.xImage_small,command = lambda main=main,key = libKey: deleteLibrary(main,key)
+			,style="Exit.TButton")
+		ref.grid(column=len(fieldKeys),row=row,sticky="ew")
+		rowWidgets.append(ref)
+		main.seqFileDict[libKey]["widgets"] = rowWidgets
 		
-		ThemedButton(main.seqFileListFrame,image=main.xImage_small,command = lambda main=main,key = libKey: deleteLibrary(main,key)
-			,style="Exit.TButton").grid(column=len(fieldKeys),row=row,sticky="ew")
 		#print(f"[input][Debug] adding {libKey} took {time.time()-lasttime} seconds")
 		lasttime = time.time()
 	#print(f"[input][Debug] updateSeqFileList took {time.time()-starttime} seconds\n")	#TODO do this in another update!
+	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
 
 def selectMainTarget(main,menu):
 	mainTargetPath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.PM.get("projectPath"))

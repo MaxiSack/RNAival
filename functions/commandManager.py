@@ -5,7 +5,22 @@ import time
 import subprocess
 import signal
 
+
+errorhandling = {
+			" memory":["The program seems to have run out of memory during execution.",
+					"   Please lower the number of threads to use under Settings."],
+			"permission":["The program seems to lack permissions to read or write files.",
+					"   Please ensure that all files are valid and accessible.",
+					"   Also ensure that enough disk space is available."],
+			"i/o":["The program seems to be unable to read or write files.",
+					"   Please ensure that all files are valid and accessible.",
+					"   Also ensure that enough disk space is available."],
+			"gzipped":["There seems to be a problem with the input files.",
+					"   Please ensure that all files are valid and accessible."]
+		}
+
 def handleOutput(commsQueue,out,error,stdout="",stderr="",grep=[],grepRequireOr=[],force=False):
+	grep = [p.lower() for p in grep]
 	allGood=True
 	if out!="":
 		if stdout!="":
@@ -15,21 +30,43 @@ def handleOutput(commsQueue,out,error,stdout="",stderr="",grep=[],grepRequireOr=
 		if len(grep)>0:
 			for line in out.split("\n"):
 				for pat in grep:
-					if pat in line:
+					if pat in line.lower():
 						commsQueue.put(("LOG",line))
 						if not force:
 							if not hasRequriedGrep(grepRequireOr,line):
 								commsQueue.put(("pipeERROR","Likely wrong adapters used, aborting the pipeline!"))
 								allGood=False
+	
+	foundErrorKeys = set()
 	if error!="":
 		if stderr!="":
 			with open(stderr,"w") as ew:
 				ew.write(error)
-		if len(grep)>0:
-			for line in error.split("\n"):
-				for pat in grep:
-					if pat in line:
-						commsQueue.put(("ERROR",line))
+		for line in error.split("\n"):
+			foundPat=False
+			for pat in grep:
+				if pat in line.lower():
+					commsQueue.put(("LOG",line))
+				foundPat=True
+				continue
+			if not foundPat:
+				commsQueue.put(("ERROR",line))
+			
+			for key in errorhandling.keys():
+				if key in line.lower():
+					foundErrorKeys.add(key)
+	
+	if len(foundErrorKeys)>0:
+		commsQueue.put(("ERROR",""))
+		commsQueue.put(("ERROR","#"*100))
+		commsQueue.put(("ERROR","   The Pipeline encountered an error:"))
+		for key in foundErrorKeys:
+			commsQueue.put(("ERROR",""))
+			for line in errorhandling[key]:
+				commsQueue.put(("ERROR",line))
+		commsQueue.put(("ERROR",""))
+		commsQueue.put(("ERROR","#"*100))
+	
 	return allGood
 
 def hasRequriedGrep(grepRequireOr,line):
@@ -122,10 +159,7 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 		if reqFound!=len(reqFiles.values()):
 			commsQueue.put(("ERROR",f"\tCould not find all input files ({reqFound}/{len(reqFiles.values())}), skipping"))
 			continue
-		#if True:
-		#	commsQueue.put(("WARN",f"\tDEBUG returning"))
-		#	nsucessfullLibs+=1
-		#	continue	#TODO debuging
+		
 		if killSignal[0]:break
 		for i,command in enumerate(commands):
 			libCommand = command
@@ -189,6 +223,7 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 					print("ERROR during execution:")
 					print("ERR: "+errormsg+" :RRE")
 					handleOutput(commsQueue,out.decode(),errormsg,stdout=stdoutfile,stderr=stderrfile,grep=grep,grepRequireOr=grepRequireOr,force=force)
+					killSignal[0]=True
 			except subprocess.CalledProcessError as e:
 				print(f"\nError {e.returncode}\n{e.cmd}\n{e.stdout.decode()}\n{e.stderr.decode()}")
 			except:
@@ -200,10 +235,8 @@ def runCommand(commsQueue,stepID,commands,reqFiles,genFiles,libIDs,killSignal=[F
 	if nsucessfullLibs ==0:
 		commsQueue.put(("pipeERROR","No command finished sucessfully, aborting the pipeline!"))
 		#commsQueue.put(("WARN","[DEBUG] No command finished sucessfully, [not] aborting the pipeline!"))
-
 	
 	print("[Command] Done in "+str(time.time()-startTime)+" seconds")
 	commsQueue.put(("FINISHED",stepID))
 	commsQueue.put(("LOG",f"\nFinished {stepID} in {round(time.time()-startTime,2)} seconds"))
 
-	

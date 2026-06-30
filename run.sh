@@ -27,8 +27,8 @@ if [ -d $condaPath/miniforge/envs/RNAival ]; then
 	fi
 	#conda list
 	echo "[launcher.sh] Activated conda, starting launcher"
-	echo "[launcher.sh] running: python3 -u '$execpath/run.py' '$execpath' | tee '$execpath/terminal.log'"
-	python3 -u "$execpath/run.py" "$execpath" | tee "$execpath/terminal.log"
+	echo "[launcher.sh] running: python3 -u '$execpath/run.py' '$execpath' |& tee '$execpath/terminal.log'"
+	python3 -u "$execpath/run.py" "$execpath" |& tee "$execpath/terminal.log"
 	lastCode=$?
 	if [ $lastCode -eq 0 ]; then
 		echo "[launcher.sh] Program exited"
