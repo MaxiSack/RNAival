@@ -1,51 +1,5 @@
 
-import os.path
-from pathlib import Path
-
 from graphs.Combograph import Combograph
-from iostuff.readCountDB import ReadCountsDatabase
-
-def showGraphs(main,fontMultiplier=1.0):
-	if main.comboGraphs is None or len(main.comboGraphs.keys())==0:
-		#main.writeError("\tERROR Data not loaded!")
-		#print("[LoadGraphs] ERROR Data not loaded!")
-		main.writeWarning("\tNo graphs to display")
-		return False
-	#print("[LoadGraphs][Debug] "+str(main.comboGraphs.items()))
-	for graph in main.comboGraphs.values():
-		#print("[Debug] displaying "+str(graph.title))
-		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
-		Path(resultDir).mkdir(parents=True, exist_ok=True)
-		graph.generateIGs(main,resultDir)
-	
-	for graph in main.comboGraphs.values():	#reset the selected tab back to the first one
-		if graph.isScrollGraph:graph.parentnotebook.finish()
-	main.outputGraphicsNotebook.select(0)
-	
-	#TODO seperate into re-draw function with other settings to re-apply
-	for graph in main.comboGraphs.values():
-		graph.drawOntoGui(fontMultiplier=fontMultiplier)
-	return True
-
-def exportGraphs(main,exportW,exportH,fontMultiplier=1.0):
-	if main.comboGraphs is None:
-		main.writeError("\tERROR Data not loaded!")
-		print("[LoadGraphs] ERROR Data not loaded!")
-		return False
-	for graph in main.comboGraphs.values():
-		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
-		Path(resultDir).mkdir(parents=True, exist_ok=True)
-		graph.exportAsSVG(resultDir,exportW,exportH,fontMultiplier)
-	return True
-
-def setStyles(main,highlightStyles):
-	if main.comboGraphs is None:
-		main.writeError("\tERROR Data not loaded!")
-		print("[LoadGraphs] ERROR Data not loaded!")
-		return False
-	for graph in main.comboGraphs.values():
-		graph.setStyles(highlightStyles)
-	return True
 
 def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	doPercent=graphDef["percent"]
@@ -54,11 +8,9 @@ def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	minL=graphDef["minL"]
 	maxL=graphDef["maxL"]
 	for length in range(minL,maxL+1):	#Highlighting queries the xvalue, not index!
-		highlighting[0][length]="esiGS"
-		highlighting[1][length]="esiPS"
-	#print("LendistHighlights")
-	#print(highlighting)
-	#print(graphDef)
+		highlighting[0][length]="colour_primary_guide"
+		highlighting[1][length]="colour_primary_passenger"
+	
 	for libID in libIDs:
 		countList = list()
 		#print((maxL+1-minL))
@@ -75,17 +27,17 @@ def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 				point[1] = point[1]/totalReads*100.0
 				point[2] = point[2]/totalReads*100.0
 		graphList.append((libID,countList))
-		#print(countList)
-	#print("")
-	legendLabels = ["positive","negative"]
-	cols = graphDef["cols"]
-	legend=("Strand:",[(cols[i],label) for i,label in enumerate(legendLabels)])
-	if "hideLegend" in graphDef:legend=None
 	
-	#graphtype="Length-Distribution"+("_percent" if doPercent else "")
-	graphKey = f"Length-Distribution"		#Used for dictionary key and filename
-	graphTitle = f"Length-Distribution"	#used as GUI and SVG graph title
-	tabName = f"Length-Distribution"	#Used as tab name
+	if "hideLegend" in graphDef:
+		legend=None
+	else:
+		legendLabels = ["forward","reverse"]
+		cols = graphDef["cols"]
+		legend=("Strand:",[(cols[i],label) for i,label in enumerate(legendLabels)])
+	
+	graphKey = f"Length-Distribution"+("_percent" if doPercent else "")		#Used for dictionary key and filename
+	graphTitle = f"Length-Distribution"								#used as GUI and SVG graph title
+	tabName = f"Length-Distribution"+(" (percent)" if doPercent else "")		#Used as tab name
 	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
@@ -94,7 +46,7 @@ def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even?
+def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even correct?
 	highlighting = [dict(),dict()]	#dict of position -> style; for both strands
 	xLabels = dict()	#pos -> string #pseudo1_gs, si297_gs, si350_ps
 	if not annotation is None:
@@ -104,28 +56,27 @@ def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even?
 			for feature in sorted(entrylist):
 				if "pseudo" in feature[3]:
 					if feature[4] == "Guide":
-						highlighting[strand][i]="pseudoGS"
+						highlighting[strand][i]="colour_secondary_guide"
 						xLabels[i]=feature[3]
 					elif feature[4] == "Passenger":
-						highlighting[strand][i]="pseudoPS"
+						highlighting[strand][i]="colour_secondary_passenger"
 					i+=1
 				else:
 					if feature[4] == "Guide":
-						highlighting[strand][i]="esiGS"
+						highlighting[strand][i]="colour_primary_guide"
 						xLabels[i]=feature[3]
 						i+=1
 					elif feature[4] == "Passenger":
-						highlighting[strand][i]="esiPS"
+						highlighting[strand][i]="colour_primary_passenger"
 						i+=1
 	#print(highlighting)
 	return highlighting,xLabels
 
-def addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
+def addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
 	doPercent=graphDef["percent"]
 	
 	highlighting,xLabels = readAnnotation(annotation)
 	
-	#graphtype="esiCounts"+("_percent" if doPercent else "")
 	graphList = list()
 	for libID in libIDs:
 		#[{3: 21, 24: 21, 45: 21, 66: 21, 89: 21, 110: 21, 131: 21, 152: 21}, {21: 21, 42: 21, 63: 21, 84: 21, 107: 21, 128: 21, 149: 21, 170: 21}]
@@ -138,7 +89,7 @@ def addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=None,highligh
 			countList[i][1]=db.getReadCount(libID,0,slen,spos)
 			countList[i][2]=db.getReadCount(libID,1,alen,apos-alen+1)
 		
-		targetLen=21
+		targetLen=21	#TODO add parameter
 		for spos in range(1,db.seqLen+1):
 			total21+=db.getReadCount(libID,0,targetLen,spos)+db.getReadCount(libID,1,targetLen,spos-targetLen+1)
 		if doPercent:
@@ -152,29 +103,29 @@ def addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=None,highligh
 			print("ERROR, no counts ???")
 		#print(countList)
 	
-	legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]
-	cols = graphDef["cols"]
-	legend=("esiRNA:",[(col,legendLabels[i]) for i,col in enumerate(cols)])
-	#print("")
-	if "hideLegend" in graphDef:legend=None
-	graphKey = f"esiRNA-Counts"	#could also be generalised to "annotated counts"
-	graphTitle = f"esiRNA Counts"
-	tabName = f"esiRNA Counts"
+	if "hideLegend" in graphDef:
+		legend=None
+	else:
+		legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]	#TODO generalise these?
+		cols = graphDef["cols"]
+		legend=("RNA:",[(col,legendLabels[i]) for i,col in enumerate(cols)])
+	
+	graphKey = f"RNA-Counts"+("_percent" if doPercent else "")	#could also be generalised to "annotated counts"
+	graphTitle = f"RNA Counts"
+	tabName = f"RNA Counts"+(" (percent)" if doPercent else "")
 	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	if len(graphList)>0:graph.addData(graphList,globalYScale=graphDef["globalYScale"])
-	#print("\nXlabels:")
-	#print(xLabels)
+	
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
-	graph.setXLabels(xLabels,graphDef["xlabSpace"])
+	graph.setXLabels(xLabels,0)
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
 def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highlightStyles=None):
-	doPercent=graphDef["percent"]#False
+	doPercent=graphDef["percent"]
 	targetLen=graphDef["targetlen"]
-	#graphtype="Counts_l"+str(targetLen)+("_percent" if doPercent else "")
 	graphList = list()
 	
 	highlighting = [dict(),dict()]	#dict of position -> style
@@ -185,14 +136,14 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 				if feature[1]!=targetLen:continue
 				if "pseudo" in feature[3]:
 					if feature[4] == "Guide":
-						highlighting[strand][feature[0]]="pseudoGS"
+						highlighting[strand][feature[0]]="colour_secondary_guide"
 					elif feature[4] == "Passenger":
-						highlighting[strand][feature[0]]="pseudoPS"
+						highlighting[strand][feature[0]]="colour_secondary_passenger"
 				else:
 					if feature[4] == "Guide":
-						highlighting[strand][feature[0]]="esiGS"
+						highlighting[strand][feature[0]]="colour_primary_guide"
 					elif feature[4] == "Passenger":
-						highlighting[strand][feature[0]]="esiPS"
+						highlighting[strand][feature[0]]="colour_primary_passenger"
 	
 	for libID in libIDs:		
 		total21=0
@@ -208,16 +159,19 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 				point[2] = point[2]/total21*100.0
 		graphList.append((libID,countList))
 	
-	if len(highlighting[0])+len(highlighting[0])>0:
-		legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]
-		cols = graphDef["cols"]
-		legend=("Read start-position:",[(col,legendLabels[i]) for i,col in enumerate(cols)])
-	else:
+	if "hideLegend" in graphDef:
 		legend=None
-	if "hideLegend" in graphDef:legend=None
-	graphKey = f"Read-Counts"
+	else:
+		if len(highlighting[0])+len(highlighting[0])>0:
+			legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]
+			cols = graphDef["cols"]
+			legend=("Read start-position:",[(col,legendLabels[i]) for i,col in enumerate(cols)])
+		else:
+			legend=None
+	
+	graphKey = f"Read-Counts"+("_percent" if doPercent else "")
 	graphTitle = f"Read Counts"
-	tabName = f"Read Counts"
+	tabName = f"Read Counts"+(" (percent)" if doPercent else "")
 	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
@@ -228,41 +182,38 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 
 def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
 	targetLen=graphDef["targetlen"]
-	#graphtype="Coverage_l"+str(targetLen)
 	
 	highlighting = [dict(),dict()]	#dict of position -> style
 	if not annotation is None:
-		#for strand,entrylist in enumerate(annotation):
 		strand=0
 		entrylist=annotation[0]
 		for feature in entrylist:
 			if feature[1]!=targetLen:continue
 			if "pseudo" in feature[3]:
 				if feature[4] == "Guide":
-					for c in range(feature[1]):highlighting[strand][feature[0]+c]="pseudoGS"
+					for c in range(feature[1]):highlighting[strand][feature[0]+c]="colour_secondary_guide"
 				elif feature[4] == "Passenger":
-					for c in range(feature[1]):highlighting[strand][feature[0]+c]="pseudoPS"
+					for c in range(feature[1]):highlighting[strand][feature[0]+c]="colour_secondary_passenger"
 			else:
 				if feature[4] == "Guide":
-					for c in range(feature[1]):highlighting[strand][feature[0]+c]="esiGS"
+					for c in range(feature[1]):highlighting[strand][feature[0]+c]="colour_primary_guide"
 				elif feature[4] == "Passenger":
-					for c in range(feature[1]):highlighting[strand][feature[0]+c]="esiPS"
+					for c in range(feature[1]):highlighting[strand][feature[0]+c]="colour_primary_passenger"
 		strand=1
 		entrylist=annotation[1]
 		for feature in entrylist:
 			if feature[1]!=targetLen:continue
 			if "pseudo" in feature[3]:
 				if feature[4] == "Guide":
-					for c in range(feature[1]):highlighting[strand][feature[0]-c]="pseudoGS"
+					for c in range(feature[1]):highlighting[strand][feature[0]-c]="colour_secondary_guide"
 				elif feature[4] == "Passenger":
-					for c in range(feature[1]):highlighting[strand][feature[0]-c]="pseudoPS"
+					for c in range(feature[1]):highlighting[strand][feature[0]-c]="colour_secondary_passenger"
 			else:
 				if feature[4] == "Guide":
-					for c in range(feature[1]):highlighting[strand][feature[0]-c]="esiGS"
+					for c in range(feature[1]):highlighting[strand][feature[0]-c]="colour_primary_guide"
 				elif feature[4] == "Passenger":
-					for c in range(feature[1]):highlighting[strand][feature[0]-c]="esiPS"
-	#print(graphtype)
-	#print(siRNAPos)
+					for c in range(feature[1]):highlighting[strand][feature[0]-c]="colour_primary_passenger"
+	
 	graphList = list()
 	for libID in libIDs:
 		coverage = [[i,0,0,0,0] for i in range(1,db.seqLen+1)]	#per position
@@ -279,16 +230,19 @@ def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=No
 				if spos+targetLen-1 in siRNAPos[1] and siRNAPos[1][spos+targetLen-1]==targetLen:
 					for cpos in range(spos,spos+targetLen): coverage[cpos-1][2]+=revCount
 		graphList.append((libID,coverage))
-		#print(coverage)
-	if len(highlighting[0])+len(highlighting[0])>0:
-		legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]
-		cols = graphDef["cols"]
-		ledDesc = [("black",str(targetLen)+"nt reads")]
-		ledDesc.extend([(col,legendLabels[i]) for i,col in enumerate(cols)])
-		legend=("Coverage:",ledDesc)
+	
+	if "hideLegend" in graphDef:
+		legend=None
 	else:
-		legend=("Coverage:",[("black",str(targetLen)+"nt reads")])
-	if "hideLegend" in graphDef:legend=None
+		if len(highlighting[0])+len(highlighting[0])>0:
+			legendLabels = ["esiRNA guide strand","esiRNA passenger strand","pseudo guide strand","pseudo passenger strand"]
+			cols = graphDef["cols"]
+			ledDesc = [("black",str(targetLen)+"nt reads")]
+			ledDesc.extend([(col,legendLabels[i]) for i,col in enumerate(cols)])
+			legend=("Coverage:",ledDesc)
+		else:
+			legend=("Coverage:",[("black",str(targetLen)+"nt reads")])
+	
 	graphKey = f"Coverage-{targetLen}"
 	graphTitle = f"Coverage of {targetLen}-nt long reads"
 	tabName = f"Coverage {targetLen}"
@@ -302,7 +256,6 @@ def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=No
 
 def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 	targetLengths=[int(p[0]) for p in graphDef["targets"]]
-	#graphtype="MultiCoverage_"+"".join(["l"+str(l) for l in targetLengths])
 	graphList = list()
 	for libID in libIDs:
 		coverage = [[0]*(len(targetLengths)*2+1) for i in range(1,db.seqLen+1)]	#per position
@@ -318,11 +271,13 @@ def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 				if revCount>0:
 					for cpos in range(spos,spos+targetLen): coverage[cpos-1][i*2+2]+=revCount
 		graphList.append((libID,coverage))
-		#print(coverage)
-	legend=("Coverage:",[(p[1],str(p[0])+"nt") for p in graphDef["targets"]])
+	
+	if "hideLegend" in graphDef:
+		legend=None
+	else:
+		legend=("Coverage:",[(p[1],str(p[0])+"nt") for p in graphDef["targets"]])
 	
 	lineColours = [graphDef["targets"][int(i/2)][1] for i in range(len(targetLengths)*2)]
-	if "hideLegend" in graphDef:legend=None
 	graphKey = f"MultiCoverage_"+"".join(["l"+str(l) for l in targetLengths])
 	graphTitle = f"Coverage of multiple lengths"
 	tabName = f"MultiCoverage"
@@ -333,10 +288,8 @@ def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 	graph.bundleID=graphDef["bundleID"]
 	graph.psname=graphDef["psname"]
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
-	#print("")
 
 def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
-	#graphtype="Coverage_all"
 	graphList = list()
 	for libID in libIDs:
 		coverage = [[i,0,0,0,0] for i in range(1,db.seqLen+1)]	#per position
@@ -350,7 +303,7 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 						coverage[cpos-1][4]+=db.getReadCount(libID,1,targetLen,spos)
 				
 		graphList.append((libID,coverage))
-		#print(coverage)
+	
 	graphKey = f"FullCoverage"
 	graphTitle = f"Coverage over all lengths"
 	tabName = f"Full Coverage"
@@ -363,13 +316,13 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
 def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=None):
-	#graphtype = "Heatmap"
 	graphList = list()
 	highlightEsis=graphDef["highlightEsis"]
 	highlightFrames=graphDef["highlightFrames"]
 	minL=graphDef["minLen"]
 	maxL=graphDef["maxLen"]
 	midpointPercentile=graphDef["middlePercentile"]
+	
 	for libID in libIDs:
 		heatmap = list()	#pos x [rev,-1,for]
 		lengthList = list(range(minL,maxL+1))
@@ -381,8 +334,6 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 			posCounts.append(-1)
 			posCounts.extend([db.getReadCount(libID,0,targetLen,spos) for targetLen in range(minL,maxL+1)])
 			heatmap.append(posCounts)
-		#print("\tlengths: "+str(lengthList))
-		#print("\tpos: "+str(posList))
 		heatGraph = [heatmap,lengthList,posList]
 		graphList.append((libID,heatGraph))
 	
@@ -399,12 +350,14 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 		for i in range(0,db.seqLen,length):
 			highlighting.add((i+2,length+maxL+1-minL-minL+1))
 			highlighting.add((db.seqLen-i-3,length-minL))
-	#print("\n[Debug] "+str(highlighting))
 	
-	legend=("Count:",[("#000000","0"),("#000064",">0"),("#00ffff","95th percentile"),("#ff0000","max")])	#TODO overwritten, but used to check for stuff..
+	if "hideLegend" in graphDef:
+		legend=None
+	else:
+		legend=("Count:",[("#000000","0"),("#000064",">0"),("#00ffff","95th percentile"),("#ff0000","max")])	#TODO overwritten, but used to check for stuff..
+	
 	colourscale_define = [(("abs",0),(0,0,0)), (("abs",1),(0,0,100)), (("rel","percentile",midpointPercentile),(0,255,255)), (("rel","max"),(255,0,0))]
 	
-	if "hideLegend" in graphDef:legend=None
 	graphKey = f"Heatmap"
 	graphTitle = f"Heatmap over all lengths and positions"
 	tabName = f"Heatmap"
@@ -416,49 +369,22 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 	graph.addData(graphList,colourscale_define=colourscale_define)
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
-def loadCounts(main,countFile,libIDs,seqLen):
-	#check for input files	[reqFiles]
-	reqNeeded=0
-	reqFound=0
-	for libID in libIDs:
-		reqNeeded+=1
-		reqFile = countFile.replace("$libID",libID)
-		if not os.path.isfile(reqFile):
-			main.writeError("\tERROR "+reqFile+" not found")
-		else:
-			reqFound+=1
-			#main.writeLog("\t"+reqFile+" was found")
-	if reqFound!=reqNeeded:
-		main.writeError("\tCould not find all input files ("+str(reqFound)+"/"+str(reqNeeded)+"), skipping")
-		return False
-	
-	#print("[LoadGraphs] Loading counts")
-	db = ReadCountsDatabase(libIDs,seqLen)
-	for libID in libIDs:
-		if not db.loadFile(libID,countFile.replace("$libID",libID)):
-			main.writeError("Count table "+str(countFile.replace("$libID",libID))+" has too many errors, aborting!")
-			return None
-	#db.printStats()
-	return db
-
 def loadGraphs(main,db,libIDs,wantedgraphs,siRNAPos,annotation=None,highlightStyles=None):
-	
-	#print("[LoadGraphs] Defining/generating graphics")
-	#main.comboGraphs = dict()
 	for graphDef in wantedgraphs:	#create grpahs based on the data
 		if graphDef[0]=="lendist":
 			addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=highlightStyles)
-		elif graphDef[0]=="esiCounts":
-			addGraph_esiCounts(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
-		elif graphDef[0]=="countsSingle":
+		elif graphDef[0]=="annotCount":
+			addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
+		elif graphDef[0]=="startPos":
 			addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
-		elif graphDef[0]=="coverageSingleEsi":
+		elif graphDef[0]=="singleCov":
 			addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
-		elif graphDef[0]=="coverageMulti":
+		elif graphDef[0]=="multiCov":
 			addGraph_multiLengthCoverage(main,graphDef,libIDs,db)
-		elif graphDef[0]=="heapmapEsi":
+		elif graphDef[0]=="heapmap":
 			addGraph_heatmap(main,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="coverageAll":
 			addGraph_coverage(main,graphDef,libIDs,db)
-	
-	main.writeLog("done.\n")
+		else:
+			main.writeError(f"Unknown graph type: {graphDef[0]}",terminalPrefix="[dsP module]")
+

@@ -161,7 +161,12 @@ class Main():
 		else:
 			module = main.tmp_run_modules[main.tmp_run_modules_index]
 			main.tmp_run_modules_index+=1
-			main.moduleDict[module].run(main)
+			try:
+				main.moduleDict[module].process(main)
+			except Exception as e:
+				main.writeError(f"[Error][Func] Processing module \"{main.moduleDict[module].moduleID}\" does not implement the function \"process(main)\".")
+				main.writeError(f"[Error][Func] Or a different error occured during execution:")
+				main.writeError(str(e))
 	
 	def runCommand(self,stepID,commands,reqFiles,genFiles,libIDs,stdoutFiles=None,stderrFiles=None,grep=[],grepRequireOr=[],force=False,libraries=None):	#new thread
 		if force:

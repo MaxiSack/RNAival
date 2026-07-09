@@ -57,6 +57,7 @@ class StyleManager:
 		main.xImage = PhotoImage(file = os.path.join(execPath,"sprites/x20.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		main.xImage_small = PhotoImage(file = os.path.join(execPath,"sprites/x16.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		main.emptyImage = PhotoImage(file = os.path.join(execPath,"sprites/empty20.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		main.emptyImage_small = PhotoImage(file = os.path.join(execPath,"sprites/empty16.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		
 		
 		#----------------------- Style -----------------------
@@ -144,8 +145,8 @@ class StyleManager:
 			self.mystyle.configure("Exit.TButton",background=self.exitCol)
 			self.mystyle.map("Exit.TButton",background=[("active",self.highlightExitCol)])
 			
-			self.mystyle.configure("bg.TButton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,relief="raised",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
-			self.mystyle.map("bg.TButton",background=[("active",self.textBackgroundColour)])
+			self.mystyle.configure("bg.TButton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,relief="flat",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
+			self.mystyle.map("bg.TButton",background=[("active",self.textBackgroundColour)],relief=[("active","flat")])
 			
 			self.mystyle.configure("DropClosed.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonClosed,relief="flat",anchor="w")
 			self.mystyle.configure("DropOpen.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonOpen,relief="flat",anchor="w")

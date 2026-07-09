@@ -178,6 +178,21 @@ class ParameterManager():
 			if vardesc[1]=="bool":
 				print(f"[PM] {key}: {vardesc[0].get()} {vardesc}")
 	
+	def deleteTags(self,tags):	#Delete all parameters with the provided tags
+		#print(f"[Debug][PM] Deleting parameters with tags: {tags}")
+		for tag in tags:
+			if not tag in self.parametertags: continue
+			for key in self.parametertags[tag]:
+				del self.parameterDict[key]
+			del self.parametertags[tag]
+	def deleteParameter(self,key):
+		for tag in list(self.parametertags.keys()):
+			if key in self.parametertags[tag]:
+				self.parametertags[tag].remove(key)
+				if len(self.parametertags[tag])==0:
+					del self.parametertags[tag]
+		del self.parameterDict[key]
+	
 	def reset(self,tags=None,tag=None,notTags=None):
 		if notTags is None:
 			if tags is None and not tag is None:
@@ -223,6 +238,13 @@ class ParameterManager():
 			if not ttag in self.parametertags: continue
 			for key in self.parametertags[ttag]:
 				if not self.validateParameter(key):allGood = False
+		return allGood
+	
+	def validate(self):
+		#print("[Debug][PM] Validating...")
+		allGood=True
+		for key in self.parameterDict.keys():
+			if not self.validateParameter(key):allGood=False
 		return allGood
 	
 	def validateParameter(self,name):
@@ -281,13 +303,12 @@ class ParameterManager():
 				error=True	#not correct format
 				self.main.writeError("ERROR, Colours need to be in Hex-code! (e.g. 'black' = '#000000', 'white' = '#ffffff')")
 		elif vartype=="unknown":
-			print(f"[PM] Warning, Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")
-			self.main.writeWarning(f"Unknown parameter \"{name}\" cannot be validated, {vardesc[4]}")
+			print(f"[PM] Warning, Unknown parameter with value \"{value}\" cannot be validated!")
+			self.main.writeWarning(f"Unknown parameter with value \"{value}\" cannot be validated!")
 			pass
 		else:
 			self.main.writeError("ERROR, unidentified parameter description! Please report this!")
 			print("[PM] ERROR, unidentified parameter!")
-			print("[PM] "+str(vardesc))
 		return error
 	
 	def checkInputParams(self, inputDict=None):	#validate all GUI parameters; unused right now / replaced by main.PM.validateTags()

@@ -4,14 +4,12 @@ from pathlib import Path
 from math import log2
 from itertools import chain
 
-from evaluation.loadGraphs import loadCounts
+from iostuff.loadCounts import loadCounts
 from graphs.Combograph import Combograph
 from functions.baseFunctions import getReverseSeq
 from graphs.drawGraphics import interpolateColoursFraction
 
-#TODO can also be modularised, like ppt modules
 def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
-	#if not main.PM.validateTags(["graphics"]):return False
 	
 	if gui:main.writeLog("\n-------------------------------------------------------\nLoading siI data into GUI")
 	else:main.writeLog("\n-------------------------------------------------------\nLoading siI data")

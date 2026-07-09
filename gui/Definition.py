@@ -10,9 +10,6 @@ from tkinter.ttk import Button as ThemedButton
 from gui.functions import *
 from gui.inputSelection import add_inputGUI
 
-from gui.siI_eval import add_siI_eval_GUI
-from gui.dsP_eval import add_dsP_eval_GUI
-
 from iostuff.programSettings import getLastProjects
 
 #ONLY gui definitions here!
@@ -63,13 +60,10 @@ def defineGUI(main):
 	
 	# -------------------- loading modules and applying their GUI --------------- 
 	main.moduleDict = loadModules(main)
-	for key,value in main.moduleDict.items():
+	for _,value in sorted([(value.guiOrder,value) for key,value in main.moduleDict.items()], key = lambda x:x[0]):
 		value.add_GUI(main)
 	
 	# -------------------- GUI for evaluation types --------------- 
-	add_siI_eval_GUI(main)
-	
-	add_dsP_eval_GUI(main)
 	
 	
 	main.graphicsTabIndex = len(main.mainNotebooktabs.keys())

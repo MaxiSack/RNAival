@@ -316,7 +316,7 @@ def addTargetBundleFoldout(main,targetBundle):
 	ThemedLabel(bundleDescriptionFrame,text=targetBundle.mainLength,anchor="w").grid(row=3,column=1,columnspan=1,sticky="new")
 	
 	if not targetBundle.annotation is None:	#add Annotation dropdown if available
-		totalFrame,annotFrame,annotCount = gfs.makeInternalFoldoutFrame(main,bundleDescriptionFrame,"Annotations:",isOpen=False)
+		totalFrame,annotFrame,annotCount = gfs.makeFoldoutFrame(main,bundleDescriptionFrame,"Annotations:",isOpen=False)
 		totalFrame.grid(row=4,column=0,columnspan=2,sticky="new")
 		showAnnotation(annotFrame,targetBundle.annotation,annotCount)
 		

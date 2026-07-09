@@ -1,38 +1,11 @@
 
 import os.path
 
-import evaluation.loadGraphs as lg
+from .loadGraphs import loadGraphs
 from functions.baseFunctions import getReverseSeq
+from iostuff.loadCounts import loadCounts
 
 # execution related functions ---------------------------------------------------------------
-
-def exportGraphs(main):	#TODO move these functions somewhere else
-	print("\n[siGUI] Exporting graphs")
-	main.writeLog("\n-------------------------------------------------------\nExporting graphs")
-	
-	if not main.PM.validateTags(["graphics"]):
-		main.writeWarning("Error validating graphic parameters.")
-		return False
-	lg.exportGraphs(main,main.PM.get("exportOverrideWidth"),main.PM.get("exportOverrideHeight"),
-		fontMultiplier=main.PM.get("fontMultiplierSVG"))
-	main.writeLog("...done.")
-	print("\n[siGUI] ...done.")
-	
-def displayGraphs(main):
-	print("\n[siGUI] Displaying graphs")
-	main.writeLog("\n-------------------------------------------------------\nDisplaying graphs")
-	if main.comboGraphs is None or len(main.comboGraphs.keys())==0:
-		main.writeWarning("Nothing to display")
-		return False
-		
-	if not main.PM.validateTags(["graphics"]):
-		main.writeWarning("Error validating graphic parameters.")
-		return False
-	main.mainNotebook.select(main.graphicsTabIndex)			#select before graph generation to make scrollbars of graphs behave nicely
-	if lg.showGraphs(main,main.PM.get("fontMultiplierGUI")):
-		#main.mainNotebook.select(main.graphicsTabIndex)	#only select later once all graphs have been generated
-		pass
-	print("\n[siGUI] ...done.")
 
 def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TODO update this to the new system
 	#if export:
@@ -105,9 +78,6 @@ def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TOD
 
 def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highlightStyles=None):
 	
-	print("\n[siGUI] Loading data")
-	main.writeLog("\n-------------------------------------------------------\nLoading data")
-	
 	grouping = dict()
 	#print(f"[dsP eval] {selectedLibIDs}")
 	for libID in selectedLibIDs:
@@ -126,7 +96,7 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
 		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
 		#print(f"[dsP eval] Countfile: {countFile}")
-		countData = lg.loadCounts(main,countFile,libIDs,main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
+		countData = loadCounts(main,countFile,libIDs,main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
 		if countData is None or countData is False: 
 			print("Error, data is None!")
 			main.writeError("Error while reading counts from file! {countFile}")
@@ -148,9 +118,9 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 			dic["bundleID"] = bundleID	#mainTarget
 			dic["psname"] = psname
 		#TODO fix highlightStyles, do we still need that?	highlightStyles is used to colour the bars, cols from graphdef is used for the legend. ????
-		lg.loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation,highlightStyles=highlightStyles)
+		loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation,highlightStyles=highlightStyles)
 		
 		#giveTextOutput(main,countData,resultDir,selectedLibIDs,export=export)	#TODO doesnt work right now
 		
-	if gui:displayGraphs(main)
+	#if gui:displayGraphs(main)
 	return True

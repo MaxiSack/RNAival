@@ -93,7 +93,7 @@ class InputManager():
 	def __init__(self):
 		self.libDict = dict()
 		self.targetDict = dict()
-		self.siiPairs = list()
+		#self.siiPairs = list()
 		self.availableTPS = dict()
 	
 	def addLib(self,path,path_r2=None,ppt="-",label="",comment=""):
@@ -213,29 +213,16 @@ class InputManager():
 	def removeEvalType(self,libID,evalType):
 		self.libDict[libID].evalTypes.remove(evalType)
 	
-	def addSIIPair(self,libPos,libNeg,label,TPS,regionStart,regionEnd):
-		#print(f"Adding siIPair {(libPos,libNeg,label,TPS,regionStart,regionEnd)}")
-		self.siiPairs.append((libPos,libNeg,label,TPS,regionStart,regionEnd))
-	def getSIIPairs(self):
-		return self.siiPairs
-	def removeSIIPair(self,index):
-		self.siiPairs.remove(index)
-	def resetLibPairs(self):
-		self.siiPairs = list()
-	
 	def reset(self):
 		print("[IM] Reseting input files")
 		self.libDict = dict()
 		self.targetDict = dict()
-		self.siiPairs = list()
 	
 	def toString(self):
 		text = "\nLibraries:\n"
 		text += "\n".join(sorted([v.toString() for v in self.libDict.values()]))
 		text += "\nTargets:\n"
 		text += "\n".join(sorted([v.toString() for v in self.targetDict.values()]))
-		text += "\nPairs:\n"
-		text += "\n".join(sorted([f"{v[0]} - {v[1]}, {v[2]}" for v in self.siiPairs]))+"\n"
 		return text
 	
 	def serializeLibs(self):
@@ -249,9 +236,20 @@ class InputManager():
 			serDict[key] = value.serialize()
 		return serDict
 	def serialize(self):
-		return ["Libraries:",self.serializeLibs(),"Targets:",self.serializeTargets(),"siIPairs:",self.siiPairs]
+		if hasattr(self,"siiPairs"):	#this should never occure since it gets removed and loaded into the siI module instead
+			print("\n[IM][ERROR] Found siiPairs in IM; this should not happen anymore!\n")
+			return ["Libraries:",self.serializeLibs(),"Targets:",self.serializeTargets(),"siIPairs:",self.siiPairs]
+		else:
+			return ["Libraries:",self.serializeLibs(),"Targets:",self.serializeTargets()]
 	def setAll(self,varList,main=None):
-		_,libDict,_,targetDict,_,self.siiPairs = varList	#TODO assert / ensure _ = key (see above)	# or use a dicttionary!
+		print("[IM] Setting all")
+		if len(varList)==6:	#backwards compatibility; load siIPairs from inputfiles.json
+			_,libDict,_,targetDict,_,self.siiPairs = varList	#TODO assert / ensure _ = key (see above)	# or use a dicttionary!
+		elif len(varList)==4:	#new system with siIPairs stored and managed separately by the siI module
+			_,libDict,_,targetDict = varList
+		else:
+			print(f"[IM][Error] Error while loading data from varlist with lengths {len(varList)}")
+		
 		for key,value in libDict.items():
 			self.libDict[key] = initLib(value)
 		for key,value in targetDict.items():
