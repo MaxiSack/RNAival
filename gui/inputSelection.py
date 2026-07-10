@@ -122,15 +122,15 @@ def updateSeqFileList(main):
 				ref = ThemedEntry(main.seqFileListFrame,textvariable=commentVar)
 				ref.grid(column=column,row=row,sticky="ew")
 			if fkey == "PS":
-				#print(f"[Input] PS-keys: {keys}")
+				#print(f"[Input] PS-keys: {PSkeys}")
 				if psCount < 1:	#shouldnt happen, since sRP has a default PS
 					print("\n\n[Input selection] ERROR, no parametersets to select!\n\n")
 					continue
 				#print(f"PPT in lib {libKey}: {libVals["ppt"]}")
-				psVar = StringVar(value=PSkeys[0] if libVals["ppt"]=="" else libVals["ppt"])	#new libraries have their ppt="" until something is selected and saved
+				psVar = StringVar(value=PSkeys[0] if libVals["ppt"]=="-" else libVals["ppt"])	#new libraries have their ppt="-" until something is selected and saved
 				main.seqFileDict[libKey][fkey] = psVar
 				if psCount==1:
-					ref = ThemedLabel(main.seqFileListFrame,text=psVar.get(),anchor="w")
+					ref = ThemedLabel(main.seqFileListFrame,text=psVar.get(),anchor="center")
 					ref.grid(column=column,row=row,sticky="ew")
 				else:
 					ref = OptionMenu(main.seqFileListFrame,psVar,*PSkeys)

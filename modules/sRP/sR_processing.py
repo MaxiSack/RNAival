@@ -356,7 +356,7 @@ def countReadsPipe(main,parameters,group,force=False):
 		#doesnt exist *yet*..., but should soon if weve made it this far
 		#so the settings need to be saved or at least the libraries updated
 	
-	command = f"python3 '{os.path.join(parameters["execPath"],"processing/sRP/countReads.py")}' '$in' '$outfile' '{mainTarget}:1-{mainlength}'"
+	command = f"python3 '{os.path.join(parameters["execPath"],"modules/sRP/countReads.py")}' '$in' '$outfile' '{mainTarget}:1-{mainlength}'"
 	command += f" --minLength {parameters["sRP-count-minLen"]} --maxLength {parameters["sRP-count-maxLen"]}"
 	commands = [command]
 	

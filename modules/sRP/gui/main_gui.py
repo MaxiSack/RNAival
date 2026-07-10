@@ -6,6 +6,8 @@ from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Button as ThemedButton
 from tkinter.ttk import Entry as ThemedEntry
 
+from gui.inputSelection import saveSeqFiles
+
 from .cutadapt import add_sRP_cutadapt_GUI
 from .ngmerge import add_sRP_ngmerge_GUI
 from .bowtie import add_sRP_bowtie_GUI
@@ -62,6 +64,7 @@ def saveNewPSFromDialogue(main):
 	if existName != psname:
 		print(f"[sRP gui] ERROR with PS creation! {existName} {psname}")
 		return
+	saveSeqFiles(main)	#update input file dropdowns
 	addPSButton(main,psname)
 	loadParameterSetValues(main,psname)
 

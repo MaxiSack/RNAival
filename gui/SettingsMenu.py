@@ -45,7 +45,7 @@ class SettingsMenu():
 		ThemedEntry(mainframe,textvariable=threadsVar).grid(column=1,row=3,columnspan=2,sticky="ew",padx=main.frameBorderSize)
 		
 		#Theme: radio
-		ThemedLabel(mainframe,text="Default theme:",anchor="w").grid(column=0,row=3,columnspan=1,sticky="ew",padx=main.frameBorderSize)
+		ThemedLabel(mainframe,text="Default theme:",anchor="w").grid(column=0,row=4,columnspan=1,sticky="ew",padx=main.frameBorderSize)
 		defThemeVar = self.PM.add("defaultTheme","text",main.PM.get("defaultTheme"),"Theme select error","Which theme the application should use by default.",tag="general")
 		ThemedRadioButton(mainframe,text="Light",variable=defThemeVar,value="light").grid(column=1,row=4,sticky="w",padx=main.frameBorderSize)
 		ThemedRadioButton(mainframe,text="Dark",variable=defThemeVar,value="dark").grid(column=2,row=4,sticky="w",padx=main.frameBorderSize)

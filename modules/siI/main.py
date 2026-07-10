@@ -11,7 +11,6 @@ def add_GUI(main):	#Called to create GUI elements and other things on Program st
 def init_project(main):	#called when a new project is created or an existing one is loaded
 	main.PM.deleteTags(["siI-pairs-tmp"])	#Delete temporary parameters from PM
 	resetPairs(main)
-	pass
 
 def after_project_load(main):	#called after project has been loaded
 	siIStoragePath = os.path.join(main.PM.get("projectPath"),"Parameters","siI.json")

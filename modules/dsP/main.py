@@ -10,11 +10,10 @@ def add_GUI(main):	#Called to create GUI elements and other things on Program st
 
 def init_project(main):	#called when a new project is created or an existing one is loaded
 	main.PM.deleteTags(["dsP-multiCoverage-tmp"])	#Delete tmp tags from PM so that they can be properly re-added next
-	setMultiCovPairs(main)	#load default values for multiCov
 
 def after_project_load(main):	#called after project has been loaded, can be used to load custom stuff
 	dsPStoragePath = os.path.join(main.PM.get("projectPath"),"Parameters","dsP.json")
-	multiCoverageList = None
+	multiCoverageList = None	#load default values for multiCov if settings not found
 	if os.path.isfile(dsPStoragePath):
 		print(f"[dsP module] Loading settings from {dsPStoragePath}")
 		try:

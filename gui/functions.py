@@ -81,6 +81,8 @@ def createNewProject(main,projectParentPath,newWindow):
 	main.mainNotebook.select(0)
 	initProject(main,pp)
 	saveSettings(main)
+	for module in main.moduleDict.values():
+		module.after_project_load(main)
 
 def initProject(main,pp):
 	initText = f"Initialising project {pp}"
