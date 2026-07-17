@@ -3,6 +3,7 @@ import os.path
 
 from tkinter import PhotoImage
 from tkinter import Text
+from tkinter import Menu
 from tkinter.font import Font
 from tkinter.ttk import Style
 
@@ -39,41 +40,35 @@ class StyleManager:
 		#print("[Style] Borderwidth: "+str(self.main.frameBorderSize))
 		
 		#----------------------- load sprites -----------------------
-		self.triDownW = PhotoImage(file = os.path.join(execPath,"sprites/ArrowDownWhite.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.triUpW = PhotoImage(file = os.path.join(execPath,"sprites/ArrowUpWhite.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.triDownB = PhotoImage(file = os.path.join(execPath,"sprites/ArrowDownBlack.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.triUpB = PhotoImage(file = os.path.join(execPath,"sprites/ArrowUpBlack.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.main.triDown = self.triDownB
-		self.main.triUp = self.triUpB
+		#these are self stored and access is regulated based on light/dark mode
+		self.triangle_down_black = PhotoImage(file = os.path.join(execPath,"sprites/triangle_down_black.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.triangle_down_white = PhotoImage(file = os.path.join(execPath,"sprites/triangle_down_white.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.triangle_up_black = PhotoImage(file = os.path.join(execPath,"sprites/triangle_up_black.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.triangle_up_white = PhotoImage(file = os.path.join(execPath,"sprites/triangle_up_white.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		
-		#these are self stored and acces is regulated based on light(dark mode
-		self.boxImage_b = PhotoImage(file = os.path.join(execPath,"sprites/Box.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.xBoxImage_b = PhotoImage(file = os.path.join(execPath,"sprites/xBox.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.boxImage_w = PhotoImage(file = os.path.join(execPath,"sprites/Box_w.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.xBoxImage_w = PhotoImage(file = os.path.join(execPath,"sprites/xBox_w.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		self.main.boxImage = self.boxImage_b
-		self.main.xBoxImage = self.xBoxImage_b
+		self.box_empty_black = PhotoImage(file = os.path.join(execPath,"sprites/box_empty_black.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.box_empty_white = PhotoImage(file = os.path.join(execPath,"sprites/box_empty_white.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.box_filled_black = PhotoImage(file = os.path.join(execPath,"sprites/box_filled_black.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		self.box_filled_white = PhotoImage(file = os.path.join(execPath,"sprites/box_filled_white.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		
-		main.xImage = PhotoImage(file = os.path.join(execPath,"sprites/x20.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		main.xImage_small = PhotoImage(file = os.path.join(execPath,"sprites/x16.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		main.emptyImage = PhotoImage(file = os.path.join(execPath,"sprites/empty20.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		main.emptyImage_small = PhotoImage(file = os.path.join(execPath,"sprites/empty16.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
-		
+		self.x_black = PhotoImage(file = os.path.join(execPath,"sprites/x_black.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
+		main.xImage = self.x_black	#no style change here
+		main.emptyImage = PhotoImage(file = os.path.join(execPath,"sprites/empty.png")).zoom(self.main.osScaleFactorInt,self.main.osScaleFactorInt)
 		
 		#----------------------- Style -----------------------
 		self.mystyle = Style()
 		self.mystyle.theme_use("alt")	#'clam', 'alt', 'default', 'classic'	#clam has no relief options
+		
+		self.availableThemes = ["light","dark","grey"]
 		self.applyTheme(initialTheme)
 		
 	
 	def applyTheme(self, theme):
 		#----------------------- Colours -----------------------
-		if theme == "light" or theme == "dark":
+		if theme == "light" or theme == "dark" or theme == "grey":
 			self.textSelectedColour = "#000000"
 			self.textSelectedBackgroundColour = "#22dd77"
 			self.buttonTextColour = "#ffffff"
-			self.foldoutButtonClosed = "#228855"
-			self.foldoutButtonOpen = "#22aa55"
 			self.radioUnselectedColour = "#000000"
 			self.radioSelectedColour = "#00ff00"
 				
@@ -90,15 +85,14 @@ class StyleManager:
 				self.main.graphBackgroundColour = "#ffffff"
 				self.main.graphLineColour = "#000000"
 				self.main.graphBarColour = "#444444"
-				self.main.graphBarFillColour = "#ccccff"
 				
 				self.exitCol = "#aa0000"
 				self.highlightExitCol = "#ff4444"
 				
-				self.main.boxImage = self.boxImage_b
-				self.main.xBoxImage = self.xBoxImage_b
-				self.main.triDown = self.triDownB
-				self.main.triUp = self.triUpB
+				self.main.triangle_down = self.triangle_down_black
+				self.main.triangle_up = self.triangle_up_black
+				self.main.box_empty = self.box_empty_black
+				self.main.box_filled = self.box_filled_black
 				
 			elif theme == "dark":#black+dark turquoise
 				self.buttonColour = "#226955"
@@ -113,18 +107,41 @@ class StyleManager:
 				self.main.graphBackgroundColour = "#111111"
 				self.main.graphLineColour = "#f1f1f1"
 				self.main.graphBarColour = "#666666"
-				self.main.graphBarFillColour = "#ccccff"
 				
 				self.exitCol = "#ff5555"
 				self.highlightExitCol = "#ff0000"
 				
-				self.main.boxImage = self.boxImage_w
-				self.main.xBoxImage = self.xBoxImage_w
-				self.main.triDown = self.triDownW
-				self.main.triUp = self.triUpW
+				self.main.triangle_down = self.triangle_down_white
+				self.main.triangle_up = self.triangle_up_white
+				self.main.box_empty = self.box_empty_white
+				self.main.box_filled = self.box_filled_white
 			
-			self.internalFoldoutButtonClosed = self.backgroundColour
-			self.internalFoldoutButtonOpen = self.backgroundColour
+			elif theme == "grey":#grey-scaled GUI
+				self.textSelectedBackgroundColour = "#aaaaaa"
+				self.buttonTextColour = "#ffffff"
+				self.radioUnselectedColour = "#ffffff"
+				self.radioSelectedColour = "#000000"
+				
+				self.buttonColour = "#777777"
+				self.buttonDarkColour = "#555555"
+				self.buttonHighlightColour = "#999999"
+				
+				self.textColour = "#000000"
+				self.textBackgroundColour = "#ffffff"
+				self.textReadonlyBackgroundColour = "#cccccc"
+				self.backgroundColour = "#e2e2e2"
+				
+				self.main.graphBackgroundColour = "#ffffff"
+				self.main.graphLineColour = "#000000"
+				self.main.graphBarColour = "#444444"
+				
+				self.exitCol = "#ffffff"
+				self.highlightExitCol = "#cccccc"
+				
+				self.main.triangle_down = self.triangle_down_black
+				self.main.triangle_up = self.triangle_up_black
+				self.main.box_empty = self.box_empty_black
+				self.main.box_filled = self.box_filled_black
 			
 			#----------------------- Styles -----------------------
 			self.mystyle.configure("TFrame",background=self.backgroundColour,highlightthickness=0)
@@ -144,22 +161,8 @@ class StyleManager:
 			self.mystyle.map("Selected.TButton",background=[("active",self.buttonHighlightColour)])
 			self.mystyle.configure("Exit.TButton",background=self.exitCol)
 			self.mystyle.map("Exit.TButton",background=[("active",self.highlightExitCol)])
-			
-			self.mystyle.configure("bg.TButton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,relief="flat",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
-			self.mystyle.map("bg.TButton",background=[("active",self.textBackgroundColour)],relief=[("active","flat")])
-			
-			self.mystyle.configure("DropClosed.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonClosed,relief="flat",anchor="w")
-			self.mystyle.configure("DropOpen.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.foldoutButtonOpen,relief="flat",anchor="w")
-			self.mystyle.map("DropClosed.TButton",background=[("active",self.foldoutButtonClosed)],relief=[("active","flat")])
-			self.mystyle.map("DropOpen.TButton",background=[("active",self.foldoutButtonOpen)],relief=[("active","flat")])
-			self.mystyle.configure("internalDropClosed.TButton",font=self.main.textFont,foreground=self.textColour,background=self.internalFoldoutButtonClosed,relief="flat",anchor="w")
-			self.mystyle.configure("internalDropOpen.TButton",font=self.main.textFont,foreground=self.textColour,background=self.internalFoldoutButtonOpen,relief="flat",anchor="w")
-			self.mystyle.map("internalDropClosed.TButton",background=[("active",self.internalFoldoutButtonClosed)],relief=[("active","flat")])
-			self.mystyle.map("internalDropOpen.TButton",background=[("active",self.internalFoldoutButtonOpen)],relief=[("active","flat")])
-			self.mystyle.configure("optionDropClosed.TButton",font=self.main.buttonTextFont,foreground=self.textColour,background=self.internalFoldoutButtonClosed,relief="flat",anchor="w")
-			self.mystyle.configure("optionDropOpen.TButton",font=self.main.buttonTextFont,foreground=self.textColour,background=self.internalFoldoutButtonOpen,relief="flat",anchor="w")
-			self.mystyle.map("optionDropClosed.TButton",background=[("active",self.internalFoldoutButtonClosed)],relief=[("active","flat")])
-			self.mystyle.map("optionDropOpen.TButton",background=[("active",self.internalFoldoutButtonOpen)],relief=[("active","flat")])
+			self.mystyle.configure("FlatText.TButton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,relief="flat",anchor="w")
+			self.mystyle.map("FlatText.TButton",background=[("active",self.backgroundColour)],relief=[("active","flat")])
 			
 			self.mystyle.configure("TRadiobutton",font=self.main.textFont,foreground=self.textColour,background=self.backgroundColour,indicatorcolor=self.radioUnselectedColour)#,indicatorrelief="raise")#,highlightcolor=buttonHighlightColour)
 			self.mystyle.map("TRadiobutton",background=[("active",self.buttonHighlightColour)],indicatorcolor=[("selected",self.radioSelectedColour)])	#,indicatorbackground=buttonHighlightColour doesnt work
@@ -186,25 +189,36 @@ class StyleManager:
 			textfield.configure(bg=self.textBackgroundColour,fg=self.textColour,selectbackground=self.textSelectedBackgroundColour,
 				selectforeground=self.textSelectedColour)
 		
-		#These are used by parameters and are not project dependent (static)
-		for tbl,boolVar in self.main.toggleButtonReferenceDict.values():
-			if boolVar.get(): 
-				for tb in tbl:
-					tb["image"]=self.main.xBoxImage
-			else: 
-				for tb in tbl:
-					tb["image"]=self.main.boxImage
+		#These are used by parameters and are not project dependent (static), but do get generated and deleted with the settingsmenu!
+		#for tbl,boolVar in self.main.toggleButtonReferenceDict.values():
+		for key in list(self.main.toggleButtonReferenceDict.keys()):
+			tbl,boolVar = self.main.toggleButtonReferenceDict[key]
+			try:
+				if boolVar.get(): 
+					for tb in tbl:
+						tb["image"]=self.main.box_filled
+				else: 
+					for tb in tbl:
+						tb["image"]=self.main.box_empty
+			except Exception as e:
+				if "invalid command name" in str(e):	#widget doesnt exist anymore
+					#tkinter.TclError: invalid command name
+					del self.main.toggleButtonReferenceDict[key]	#dirty fix for not properly removing togglebuttons from this dict #TODO
+				else:
+					print(f"[Styleman][Error] Error setting style of togglebutton with key {key}:")
+					print(e)
+				
 		
 		#These are only used for annotation and therefore project-dependent (dynamic)
 		for foldoutID,frameRef in enumerate(self.main.foldoutFrameReferenceList):
 			if len(frameRef)==4:
 				fbi = frameRef[1]
-				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.xBoxImage
-				else: fbi["image"]=self.main.boxImage
+				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.box_filled
+				else: fbi["image"]=self.main.box_empty
 			else:
 				fbi = frameRef[2]
-				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.triUp
-				else: fbi["image"]=self.main.triDown
+				if self.main.foldoutStates[foldoutID]: fbi["image"]=self.main.triangle_up
+				else: fbi["image"]=self.main.triangle_down
 		
 		#These are only used for the menubar and therefore project independent (static)
 		for menu in self.registredMenus:
@@ -233,3 +247,14 @@ class StyleManager:
 			selectforeground=self.textSelectedColour,borderwidth=0,highlightthickness=0)
 		self.registredStyledTextFields.append(textfield)
 		return textfield
+	
+	def removeStyledText(self,textfield):
+		self.registredStyledTextFields.remove(textfield)
+	
+	def getStyledMenu(self,parent):
+		menubar = Menu(parent)
+		menubar.config(font=self.main.buttonTextFont,fg=self.textColour,bg=self.backgroundColour,
+				activeforeground=self.textColour,activebackground=self.textBackgroundColour)
+		self.registredMenus.append(menubar)
+		return menubar
+	

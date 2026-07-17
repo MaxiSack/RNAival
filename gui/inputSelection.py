@@ -166,7 +166,7 @@ def updateSeqFileList(main):
 				ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
 					activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
 			rowWidgets.append(ref)
-		ref = ThemedButton(main.seqFileListFrame,image=main.xImage_small,command = lambda main=main,key = libKey: deleteLibrary(main,key)
+		ref = ThemedButton(main.seqFileListFrame,image=main.xImage,command = lambda main=main,key = libKey: deleteLibrary(main,key)
 			,style="Exit.TButton")
 		ref.grid(column=len(fieldKeys),row=row,sticky="ew")
 		rowWidgets.append(ref)
@@ -368,10 +368,6 @@ def add_inputGUI(main):
 	
 	#---------------- tmp -------------------
 	ThemedButton(main.inputFrame,text="Run entire pipeline",command=lambda main=main:main.runPipeline()).pack(fill="x",anchor="nw",side="bottom")
-	ThemedButton(main.inputFrame,text="Save settings [tmp]",command=lambda main=main:gfs.saveSettings(main)).pack(fill="x",anchor="nw",side="bottom")
-	ThemedButton(main.inputFrame,text="Load graphics [tmp]",command=main.loadDataIntoGUI).pack(fill="x",anchor="nw",side="bottom")
-	ThemedButton(main.inputFrame,text="Export graphics [tmp]",command=main.exportGraphs).pack(fill="x",anchor="nw",side="bottom")
-	ThemedButton(main.inputFrame,text="Stop program [tmp]",command=main.terminateThreads).pack(fill="x",anchor="nw",side="bottom")
 	
 	# --------------------- main ----------------
 	inputFrame_main = ThemedFrame(main.inputFrame,style="gBorder.TFrame")

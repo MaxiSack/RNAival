@@ -23,6 +23,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		main.writeError("\"Both\" is currently not supported for siI.")
 		return
 	print("[siI eval] Loading graphics")
+	#hideLabels = main.PM.get(RNAival-hide_Labels_Legends)	#TODO
 	for pair in libPairs:	#[(libPos,libNeg,label,TPS,start,end)]	#TPS = (bundleID,psname)
 		libIDs = pair[0]+pair[1]
 		pairLabel = pair[2]

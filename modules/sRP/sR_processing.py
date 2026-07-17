@@ -44,7 +44,7 @@ def prepareInput(main,psname,libIDs,paired=False,force=False):	#cat sequencing r
 
 def runCutadapt(main,psname,libIDs,paired=False,force=False):
 	if main.isStepRunning():return False
-	parameters = main.PM.getDict(tags=["general","project"])
+	parameters = main.PM.getDict(tags=[main.globalProgramSettingsKey,main.localProjectSettingsKey])
 	parameters.update(main.PM.getParameterSet(psname))
 	parameters["paired"] = paired
 	parameters["libIDs"] = libIDs
@@ -61,7 +61,7 @@ def runCutadaptPipe(main,parameters,force=False):	#required parameters in parame
 	
 	extraBuffer = getSpacedParams(parameters["sRP-cut-extraParams"])
 	if parameters["paired"]:
-		command = f"cutadapt {extraBuffer}-j {parameters["threadsVar"]} -e {parameters["sRP-cut-errorRate"]}"
+		command = f"cutadapt {extraBuffer}-j {parameters["RNAival-max_threads_to_use"]} -e {parameters["sRP-cut-errorRate"]}"
 		command += f" -m {parameters["sRP-cut-minReadLength"]} -O {parameters["sRP-cut-minAdapterLength"]}"
 		command += ("" if parameters["sRP-cut-allowAdapterInDel"] else " --no-indels")+" --discard-untrimmed -q 20,20"
 		command += f" -a {parameters["sRP-cut-adapter1"]} -A {parameters["sRP-cut-adapter2"]} -o \"$outR1\" -p \"$outR2\" \"$inR1\" \"$inR2\""
@@ -70,7 +70,7 @@ def runCutadaptPipe(main,parameters,force=False):	#required parameters in parame
 				"$outR2":os.path.join(adaptDir,"$libID_R2.fastq.gz"),
 				"$report":os.path.join(adaptDir,"$libID_report.txt")}
 	else:
-		command = f"cutadapt {extraBuffer}-j {parameters["threadsVar"]} -e {parameters["sRP-cut-errorRate"]}"
+		command = f"cutadapt {extraBuffer}-j {parameters["RNAival-max_threads_to_use"]} -e {parameters["sRP-cut-errorRate"]}"
 		command += f" -m {parameters["sRP-cut-minReadLength"]} -O {parameters["sRP-cut-minAdapterLength"]}"
 		command += ("" if parameters["sRP-cut-allowAdapterInDel"] else " --no-indels")+" --discard-untrimmed -q 20,20"
 		command += f" -a {parameters["sRP-cut-adapter1"]} -o \"$outR1\" \"$inR1\""
@@ -85,22 +85,22 @@ def runCutadaptPipe(main,parameters,force=False):	#required parameters in parame
 		genFiles["$outR1"]=os.path.join(adaptDir,"$libID_R1_adapt.fastq.gz")
 		genFiles["$outcut5p"]=os.path.join(adaptDir,"$libID_R1_cut5p.fastq.gz")
 		genFiles["$outcut3p"]=os.path.join(adaptDir,"$libID_R1.fastq.gz")
-		commands.append(f"cutadapt -j {parameters["threadsVar"]}"
+		commands.append(f"cutadapt -j {parameters["RNAival-max_threads_to_use"]}"
 			+f" -m {parameters["sRP-cut-minReadLength"]} --cut {parameters["sRP-cut-cut5pnucs"]} -o \"$outcut5p\" \"$outR1\"")
-		commands.append(f"cutadapt -j {parameters["threadsVar"]}"
+		commands.append(f"cutadapt -j {parameters["RNAival-max_threads_to_use"]}"
 			+f" -m {parameters["sRP-cut-minReadLength"]} --cut -{parameters["sRP-cut-cut3pnucs"]} -o \"$outcut3p\" \"$outcut5p\"")
 		outfiles.append("$report_cut5p")
 		outfiles.append("$report_cut3p")
 	elif parameters["sRP-cut-cut5pnucs"] > 0:
 		genFiles["$outR1"]=os.path.join(adaptDir,"$libID_R1_adapt.fastq.gz")
 		genFiles["$outcut5p"]=os.path.join(adaptDir,"$libID_R1.fastq.gz")
-		commands.append(f"cutadapt -j {parameters["threadsVar"]}"
+		commands.append(f"cutadapt -j {parameters["RNAival-max_threads_to_use"]}"
 			+" -m "+str(parameters["sRP-cut-minReadLength"])+" --cut "+str(parameters["sRP-cut-cut5pnucs"])+" -o \"$outcut5p\" \"$outR1\"")
 		outfiles.append("$report_cut5p")
 	elif parameters["sRP-cut-cut3pnucs"] > 0:
 		genFiles["$outR1"]=os.path.join(adaptDir,"$libID_R1_adapt.fastq.gz")
 		genFiles["$outcut3p"]=os.path.join(adaptDir,"$libID_R1.fastq.gz")
-		commands.append(f"cutadapt -j {parameters["threadsVar"]}"
+		commands.append(f"cutadapt -j {parameters["RNAival-max_threads_to_use"]}"
 			+f" -m {parameters["sRP-cut-minReadLength"]} --cut -{parameters["sRP-cut-cut3pnucs"]} -o \"$outcut3p\" \"$outR1\"")
 		outfiles.append("$report_cut3p")
 	
@@ -115,7 +115,7 @@ def runCutadaptPipe(main,parameters,force=False):	#required parameters in parame
 
 def runNGmerge(main,psname,libIDs,force=False):
 	if main.isStepRunning():return False
-	parameters = main.PM.getDict(tags=["general","project"])
+	parameters = main.PM.getDict(tags=[main.globalProgramSettingsKey,main.localProjectSettingsKey])
 	parameters.update(main.PM.getParameterSet(psname))
 	parameters["libIDs"] = libIDs
 	return runNGmergePipe(main,parameters,force=force)
@@ -126,7 +126,7 @@ def runNGmergePipe(main,parameters,force=False):
 	Path(mergeDir).mkdir(parents=True, exist_ok=True)
 	
 	#NGmerge only uses <=2 cores
-	#"-n "+str(parameters["threadsVar"])+	#NGmerge with 16 cores caused an error
+	#"-n "+str(parameters["RNAival-max_threads_to_use"])+	#NGmerge with 16 cores caused an error
 	#since it only uses few anyway, just always run it on one
 	extraBuffer = getSpacedParams(parameters["sRP-merge-extraParams"])
 	command = f"NGmerge {extraBuffer} -m {parameters["sRP-merge-minPairedOverlap"]}"
@@ -164,7 +164,7 @@ def deleteIntermediateSeqfiles(main,psname,libIDs,paired=False):
 
 def createIndex(main,psname,libIDs,force=False):
 	if main.isStepRunning():return False
-	parameters = main.PM.getDict(tags=["general","project"])
+	parameters = main.PM.getDict(tags=[main.globalProgramSettingsKey,main.localProjectSettingsKey])
 	parameters.update(main.PM.getParameterSet(psname))
 	grouping = dict()
 	for libID in libIDs:
@@ -202,11 +202,11 @@ def createIndexPipe(main,parameters,force=False):
 		#Bowtie needs the index prefix
 		if bowtieversion==2:	#Bowtie2
 			indexFile = f"{indexID}.1.bt2"
-			command = f"bowtie2-build {extraBuffer}--quiet --threads {parameters["threadsVar"]}"
+			command = f"bowtie2-build {extraBuffer}--quiet --threads {parameters["RNAival-max_threads_to_use"]}"
 			command += " \"$targetSeq"+"\" \"{os.path.join(indexDir,indexID,indexID)}\""
 		elif bowtieversion==1:	#bowtie1
 			indexFile = f"{indexID}.1.ebwt"
-			command = f"bowtie-build {extraBuffer}--quiet --threads {parameters["threadsVar"]}"
+			command = f"bowtie-build {extraBuffer}--quiet --threads {parameters["RNAival-max_threads_to_use"]}"
 			command += " \""+"\",\"".join(targetList)+f"\" \"{os.path.join(indexDir,indexID,indexID)}\""
 		
 		genFiles[f"$index-{indexID}"]=os.path.join(indexDir,indexID,indexFile)
@@ -222,7 +222,7 @@ def mapReads(main,psname,libIDs,force=False):
 	if main.isStepRunning():return False
 	
 	if len(main.mapTmp) == 0:	#collect params and store as tmp var
-		parameters = main.PM.getDict(tags=["general","project"])
+		parameters = main.PM.getDict(tags=[main.globalProgramSettingsKey,main.localProjectSettingsKey])
 		parameters.update(main.PM.getParameterSet(psname))
 		main.mapTmpParams = parameters
 		grouping = dict()
@@ -274,23 +274,23 @@ def mapReadsPipe(main,parameters,group,force=False):
 	
 	if bowtieversion==2:	#Bowtie2
 		indexFile = f"{indexID}.1.bt2"
-		command = f"bowtie2 {extraBuffer}--threads {int(int(parameters["threadsVar"])/2)} -x \""
+		command = f"bowtie2 {extraBuffer}--threads {int(int(parameters["RNAival-max_threads_to_use"])/2)} -x \""
 		command += os.path.join(indexDir,str(indexID))+"\" -U \"$inFastq\" --no-unal --very-sensitive"
 		#command += " --score-min C,0,0"	#prevents mismatches and gaps
-		command += f" | samtools view -@ {int(int(parameters["threadsVar"])/4)} -bS -"
-		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/4)} -o \"$outBam\""
+		command += f" | samtools view -@ {int(int(parameters["RNAival-max_threads_to_use"])/4)} -bS -"
+		command += f" | samtools sort -@ {int(int(parameters["RNAival-max_threads_to_use"])/4)} -o \"$outBam\""
 		commands.append(command)
 	elif bowtieversion==1:	#bowtie1
 		indexFile = f"{indexID}.1.ebwt"
-		command = f"bowtie {extraBuffer} -p {int(int(parameters["threadsVar"])/2)} -x \""
+		command = f"bowtie {extraBuffer} -p {int(int(parameters["RNAival-max_threads_to_use"])/2)} -x \""
 		command += os.path.join(indexDir,str(indexID))+"\" -q \"$inFastq\" --no-unal --best --tryhard -n 3 --chunkmbs 512 -S"
-		command += f" | samtools view -@ {int(int(parameters["threadsVar"])/4)} -bS -"
-		command += f" | samtools sort -@ {int(int(parameters["threadsVar"])/4)} -o \"$outBam\""
+		command += f" | samtools view -@ {int(int(parameters["RNAival-max_threads_to_use"])/4)} -bS -"
+		command += f" | samtools sort -@ {int(int(parameters["RNAival-max_threads_to_use"])/4)} -o \"$outBam\""
 		commands.append(command)
 	
 	commands.append("samtools idxstats \"$outBam\" > \"$idxfile\"")
-	commands.append(f"samtools index -@ {int(int(parameters["threadsVar"])/2)} \"$outBam\"")
-	commands.append(f"samtools view -@ {int(int(parameters["threadsVar"])/2)} -b -o \"$outRegion\" \"$outBam\" \"{mainTarget}:1-{mainlength}\"")
+	commands.append(f"samtools index -@ {int(int(parameters["RNAival-max_threads_to_use"])/2)} \"$outBam\"")
+	commands.append(f"samtools view -@ {int(int(parameters["RNAival-max_threads_to_use"])/2)} -b -o \"$outRegion\" \"$outBam\" \"{mainTarget}:1-{mainlength}\"")
 	
 	if main.IM.getLib(libIDs[0]).isPairedEnd():
 		reqFiles = {"$inFastq":os.path.join(readDir,"$libID.fastq.gz"),"$index":os.path.join(indexDir,indexFile)}
@@ -314,7 +314,7 @@ def countReads(main,psname,libIDs,force=False):
 	if main.isStepRunning():return False
 	
 	if len(main.countTmp) == 0:	#Same system as for mapping
-		parameters = main.PM.getDict(tags=["general","project"])
+		parameters = main.PM.getDict(tags=[main.globalProgramSettingsKey,main.localProjectSettingsKey])
 		parameters.update(main.PM.getParameterSet(psname))
 		parameters["execPath"] = main.execPath
 		main.countTmpParams = parameters

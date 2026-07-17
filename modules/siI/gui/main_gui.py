@@ -143,7 +143,7 @@ def addPair(main,pairLoad=None,updateView=True):
 	ThemedEntry(pairFrame,textvariable=endVar,width=10).grid(column=1,row=3,sticky="w")
 	ThemedFrame(pairFrame,style="TFrame").grid(column=0,row=4,columnspan=2,sticky="news")
 	
-	ThemedButton(pairFrame,image=main.xImage_small,command = lambda main=main,pairID = pairID: _deleteSiIPair(main,pairID),style="Exit.TButton").grid(
+	ThemedButton(pairFrame,image=main.xImage,command = lambda main=main,pairID = pairID: _deleteSiIPair(main,pairID),style="Exit.TButton").grid(
 		column=4,row=0,rowspan=2,sticky="new",padx=(0,main.frameBorderSize*2),pady=main.frameBorderSize*2)
 	
 	pairFrame.rowconfigure(0,weight=0,uniform="fred")

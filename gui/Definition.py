@@ -1,4 +1,6 @@
 
+import webbrowser
+
 from tkinter import Tk
 from tkinter import Text
 from tkinter import Menu
@@ -7,7 +9,7 @@ from tkinter.ttk import Notebook
 from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Button as ThemedButton
 
-from gui.functions import *
+from gui.functions import loadModules,loadProject,loadProjectSelect,createNewProjectMenu,openSettingsMenu,setTheme,switchThemeDarkLight,openAboutMenu
 from gui.inputSelection import add_inputGUI
 
 from iostuff.programSettings import getLastProjects
@@ -16,33 +18,60 @@ from iostuff.programSettings import getLastProjects
 def defineGUI(main):
 	mainWindow = main.mainWindow
 	
-	#---------------- Menu -------------------
+	#---------------- Menubar -------------------
 	mainWindow.option_add('*tearOff', False)	#prevents "tearing off" dropdowns
-	menubar = Menu(mainWindow)
-	main.menubar = menubar
+	menubar = main.styleman.getStyledMenu(mainWindow)
 	mainWindow.config(menu=menubar)
-	menubar.config(font=main.buttonTextFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
-			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	main.styleman.registredMenus.append(menubar)
-	menubar.add_command(label=" New ",command=lambda main=main:createNewProjectMenu(main))	#padding?
-	openRecentMenu = Menu(menubar)
-	menubar.add_cascade(menu=openRecentMenu,label=" Recent ")
-	openRecentMenu.config(font=main.textFont,fg=main.styleman.textColour,bg=main.styleman.backgroundColour,
-			activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
-	main.styleman.registredMenus.append(openRecentMenu)
+	
+	#------------- File -------------
+	fileMenu = main.styleman.getStyledMenu(menubar)
+	menubar.add_cascade(menu=fileMenu,label=" File ")
+	fileMenu.add_command(label="New",command=lambda main=main:createNewProjectMenu(main))
+	fileMenu.add_command(label="Open",command=lambda main=main:loadProjectSelect(main))
+	
+	openRecentMenu = main.styleman.getStyledMenu(menubar)
+	fileMenu.add_cascade(menu=openRecentMenu,label="Open Recent")
 	lastProjects = getLastProjects("",execPath=main.execPath)
 	for name,path in lastProjects:
 		openRecentMenu.add_command(label=name,command=lambda main=main,pp=path:loadProject(main,pp))
+	fileMenu.add_separator()
+	fileMenu.add_command(label="Save",command=main.saveSettings)
+	fileMenu.add_separator()
+	fileMenu.add_command(label="Quit",command=main.closeWindow)
 	
-	#menubar.add_command(label="Open",command=openProjectList)	#not implemented
+	#------------- Edit -------------
+	editMenu = main.styleman.getStyledMenu(menubar)
+	menubar.add_cascade(menu=editMenu,label=" Edit ")
 	main.settingsMenu = None
-	menubar.add_command(label=" Settings ",command=lambda main=main:openSettingsMenu(main))
-	#menubar.add_command(label="About",command=openAboutMenu)
-	#menubar.add_command(label="        ",command=openAboutMenu)
-	#menubar.add_command(label="Project ",command=openAboutMenu)
-	menubar.add_command(label=" Darkmode ",command=lambda main=main:switchTheme(main))
+	editMenu.add_command(label="Settings",command=lambda main=main:openSettingsMenu(main))
 	
-	mainWindow.bind_all("<Control-d>",lambda event,main=main:switchTheme(main))
+	themeSelectMenu = main.styleman.getStyledMenu(menubar)
+	editMenu.add_cascade(menu=themeSelectMenu,label="Theme")
+	for theme in main.styleman.availableThemes:
+		themeSelectMenu.add_command(label=theme,command=lambda main=main,theme=theme:setTheme(main,theme))
+	main.lastTheme = "light"
+	mainWindow.bind_all("<Control-d>",lambda event,main=main:switchThemeDarkLight(main))
+	
+	#------------- Actions -------------
+	actionsMenu = main.styleman.getStyledMenu(menubar)
+	menubar.add_cascade(menu=actionsMenu,label=" Actions ")
+	actionsMenu.add_command(label="Run pipeline",command=main.runPipeline)
+	actionsMenu.add_command(label="Stop pipeline",command=main.terminateThreads)
+	actionsMenu.add_separator()
+	actionsMenu.add_command(label="Reload graphics",command=main.loadDataIntoGUI)
+	actionsMenu.add_command(label="Export graphics",command=main.exportGraphs)
+	
+	#------------- Help -------------
+	helpMenu = main.styleman.getStyledMenu(menubar)
+	menubar.add_cascade(menu=helpMenu,label=" Help ")
+	main.aboutMenu = None
+	helpMenu.add_command(label="About",command=lambda main=main:openAboutMenu(main))
+	helpMenu.add_command(label="Manual",command=main.openManual)
+	helpMenu.add_command(label="Github",command=lambda url = "https://github.com/MaxiSack/RNAival": webbrowser.open(url,new=0,autoraise=True))
+	helpMenu.add_command(label="Contact",command=lambda url = "https://www.informatik.uni-halle.de/arbeitsgruppen/bioinformatik/mitarbeiterinnen/sack/?lang=en": webbrowser.open(url,new=0,autoraise=True))
+	
+	#---------------- Menubar end -------------------
+	
 	
 	#---------------- Tabs -------------------
 	main.mainNotebook = Notebook(mainWindow)
@@ -50,7 +79,7 @@ def defineGUI(main):
 	
 	add_inputGUI(main)
 	
-	main.outputTextLog = getStyledText(main,main.mainNotebook)	#Log is now second tab 
+	main.outputTextLog = main.styleman.getStyledText(main.mainNotebook)	#Log is now second tab 
 	main.mainNotebook.add(main.outputTextLog,	text="Program log")
 	main.outputTextLog.tag_configure("error",foreground="#ff0000",font=main.errorLogFont)
 	main.outputTextLog.tag_configure("warn",foreground="#dd8800",font=main.errorLogFont)
@@ -63,9 +92,7 @@ def defineGUI(main):
 	for _,value in sorted([(value.guiOrder,value) for key,value in main.moduleDict.items()], key = lambda x:x[0]):
 		value.add_GUI(main)
 	
-	# -------------------- GUI for evaluation types --------------- 
-	
-	
+	# --------------------Output --------------- 
 	main.graphicsTabIndex = len(main.mainNotebooktabs.keys())
 	print(f"[GUI def] adding Graphics at {main.graphicsTabIndex}")
 	
@@ -81,7 +108,7 @@ def defineGUI(main):
 	
 	textNotebookIndex = len(main.mainNotebooktabs.keys())
 	print(f"[GUI def] adding Text at {textNotebookIndex}")
-	main.outputTextField = getStyledText(main,main.mainNotebook)
+	main.outputTextField = main.styleman.getStyledText(main.mainNotebook)
 	main.outputTextField.config(tabs = "6c")
 	main.mainNotebook.add(main.outputTextField,text="Textual output")
 	main.mainNotebooktabs[textNotebookIndex] = main.outputTextField
@@ -89,5 +116,5 @@ def defineGUI(main):
 	for i in range(len(main.mainNotebook.tabs())):	#hiding all tabs until a new project has been generated or an existing one was loaded
 		main.mainNotebook.hide(i)
 	
-	if main.PM.get("loadLastProjectOnStartup") and len(lastProjects)>0:loadProject(main,lastProjects[0][1])
+	if main.PM.get("RNAival-load_last_project_on_startup") and len(lastProjects)>0:loadProject(main,lastProjects[0][1])
 

@@ -4,6 +4,11 @@ from datetime import datetime
 from tkinter import Tk
 from queue import Queue
 
+import os
+import os.path
+import subprocess
+import platform
+
 from gui.Definition import defineGUI
 from gui.StyleManager import StyleManager
 from gui.ParameterManager import ParameterManager
@@ -33,6 +38,9 @@ class Main():
 		self.mainWindow.protocol("WM_DELETE_WINDOW",self.closeWindow)
 		self.pipelineError = False
 		
+		self.globalProgramSettingsKey = "global_program"
+		self.localProjectSettingsKey = "local_project"
+		
 		#------- defines before building anything else! ------
 		self.inputVars = dict()
 		self.varTags = dict()
@@ -51,17 +59,24 @@ class Main():
 		self.IM = InputManager()
 		
 		#Program settings
-		self.PM.add("threadsVar","int",16,"Threads error","Number of threads used by external tools.",tag="general")
-		self.PM.add("loadLastProjectOnStartup","bool",True,"Bool error","Wether to load the last project on startup or not.",tag="general")
-		self.PM.add("showGraphsOnProjectLoad","bool",True,"Bool error","Wether to generate the graphs on project load or not.",tag="general")
-		self.PM.add("defaultTheme","text","light","Theme select error","Which theme the application should use by default.",tag="general")
+		self.PM.add("RNAival-max_threads_to_use","int",16,"Threads error","Number of threads used by external tools.",tag=self.globalProgramSettingsKey)
+		self.PM.add("RNAival-load_last_project_on_startup","bool",True,"Bool error","Wether to load the last project on startup or not.",tag=self.globalProgramSettingsKey)
+		self.PM.add("RNAival-show_graphs_on_project_load","bool",True,"Bool error","Wether to generate the graphs on project load or not.",tag=self.globalProgramSettingsKey)
+		
+		self.PM.add("currentTheme","text","light","Theme select error","Which theme the application should use by default.",tag=self.globalProgramSettingsKey)
+		
+		self.PM.add("RNAival-hide_Labels_Legends","bool",False,"boolerror","Wether to hide axis labels and legends in graphs",tag=self.localProjectSettingsKey)
+		self.PM.add("RNAival-font_multiplier_GUI","float",1.0,"","",tag=self.localProjectSettingsKey)
+		self.PM.add("RNAival-export_width","int",1500,"","",tag=self.localProjectSettingsKey)
+		self.PM.add("RNAival-export_height","int",500,"","",tag=self.localProjectSettingsKey)
+		self.PM.add("RNAival-font_multiplier_SVG","float",1.0,"","",tag=self.localProjectSettingsKey)
+		
 		
 		functions.loadProgramSettings(self)
-		self.currentTheme = self.PM.get("defaultTheme")
-		self.styleman = StyleManager(self,initialTheme=self.currentTheme,execPath=self.execPath)
+		self.styleman = StyleManager(self,initialTheme=self.PM.get("currentTheme"),execPath=self.execPath)
 		
 		
-		self.PM.add("projectPath","path","","Project path error","Directory where the project is stored",tag="project")
+		self.PM.add("projectPath","path","","Project path error","Directory where the project is stored",tag=self.localProjectSettingsKey)
 		
 		defineGUI(self)
 		
@@ -71,7 +86,7 @@ class Main():
 		print("\n[Main] resetting everything")
 		self.foldoutFrameReferenceList = list()
 		self.styleman.reset()
-		self.PM.reset(notTags=["general"])
+		self.PM.reset(notTags=[self.globalProgramSettingsKey])
 		self.PM.clearPS()
 		self.IM.reset()
 		self.resetTextOutput()
@@ -80,6 +95,8 @@ class Main():
 		print("[Main] done.\n")
 	def saveProgramSettings(self):
 		functions.saveProgramSettings(self)
+	def saveProjectSettings(self):
+		functions.saveProjectSettings(self)
 	def getMain(self):
 		return self.mainWindow
 	def writeLog(self,text,error=False,warn=False,terminalPrefix=""):
@@ -120,6 +137,7 @@ class Main():
 	def closeWindow(self):
 		self.terminateThreads()
 		print("[Main] Exiting")
+		self.saveProgramSettings()
 		self.getMain().destroy()
 	
 	def runPipeline(main):
@@ -208,6 +226,20 @@ class Main():
 		else:
 			self.killSignal[0] = False
 			return False
+	def openManual(main):
+		try:
+			system=platform.system()
+			if system=="Darvin":
+				subprocess.call(("open",os.path.join(main.execPath,"Manual.pdf")))
+			elif system=="Windows":
+				os.startfile(os.path.join(main.execPath,"Manual.pdf"))
+			else:
+				subprocess.call(("xdg-open",os.path.join(main.execPath,"Manual.pdf")))
+		except Exception as e:
+			main.writeError(str(e))
+			main.writeError("Problem with opening the Manual.")
+			main.writeError("You can instead find it in the program directory and open it manually.")
+
 def launch(execPath=None):
 	Main("RNAival - None",execPath=execPath).mainWindow.mainloop()
 	print("[Main] Done with RNAival GUI")

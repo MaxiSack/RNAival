@@ -16,11 +16,13 @@ from tkinter.ttk import Scrollbar as ThemedScrollbar
 from tkinter.ttk import Entry as ThemedEntry
 from tkinter import Toplevel
 from tkinter.filedialog import askdirectory
+from tkinter.filedialog import askopenfilename
 
 import iostuff.seqFiles as seqIO
 from gui.inputSelection import updateSeqFiles,updateTargetListFrame,saveSeqFiles
 #import gui.siI_eval as sig
 from gui.SettingsMenu import SettingsMenu
+from gui.AboutMenu import AboutMenu
 from gui.ScrollableNotebook import ScrollableNotebook
 
 #Serves as container for functions that work on/with main
@@ -142,10 +144,10 @@ def loadProject(main,pp):
 			
 			for buttonList,boolVar in main.toggleButtonReferenceDict.values():	#update the Icons on togglebuttons to reflect their states AFTER laoding vars
 				for button in buttonList:
-					if boolVar.get():button["image"]=main.xBoxImage
-					else:button["image"]=main.boxImage
+					if boolVar.get():button["image"]=main.box_filled
+					else:button["image"]=main.box_empty
 			
-			if main.PM.get("showGraphsOnProjectLoad"):
+			if main.PM.get("RNAival-show_graphs_on_project_load"):
 				main.loadDataIntoGUI()
 		else:
 			print(f"[main func] ERROR, Project {settingsFile} not found.")
@@ -154,6 +156,12 @@ def loadProject(main,pp):
 		main.writeError(f"Error loading project from \"{settingsFile}\".")
 		main.writeError(str(e))
 		return False
+
+def loadProjectSelect(main):
+	settingsFile = askopenfilename(filetypes=[("Project settings file","ProjectSettings.json")],title="Select ProjectSettings.json from the project folder",initialdir=main.execPath)
+	if isinstance(settingsFile,str) and settingsFile!="":
+		print("[main func] Loading project "+settingsFile)
+		loadProject(main,settingsFile.removesuffix("ProjectSettings.json"))
 
 def updateLastProjectsFile(currentProject,execPath):
 	lastProjects = [currentProject]
@@ -168,21 +176,10 @@ def updateLastProjectsFile(currentProject,execPath):
 		pass
 	with open(lppath,"w") as lpw: lpw.write("\n".join(lastProjects[:10]))
 
-def saveSettings(main):
-	if not main.PM.validate():
-		main.writeError("")
-		main.writeError("#################################################")
-		main.writeError("#   Error validating parameters, cannot save.   #")
-		return False
-	print(f"[main func] Saving settings to {main.PM.get("projectPath")}")
-	
-	updateLastProjectsFile(main.PM.get("projectPath"),main.execPath)
-	
-	#print(main.PM.toString())
-	#main.PM.printTags()
-	
-	projectSettings = main.PM.getDict(tags=["project","graphics"])
+def saveProjectSettings(main):
+	projectSettings = main.PM.getDict(tag=main.localProjectSettingsKey)
 	projectSettingsPath = os.path.join(main.PM.get("projectPath"),"ProjectSettings.json")
+	print(f"[main func] Saving project settings to \"{projectSettingsPath}\".")
 	try:
 		with open(projectSettingsPath,"w") as jw:
 			json.dump(projectSettings,jw,indent="\t",sort_keys=True)
@@ -190,6 +187,22 @@ def saveSettings(main):
 		main.writeError(f"Error saving project settings to \"{projectSettingsPath}\".")
 		main.writeError(str(e))
 		return False
+
+def saveSettings(main):
+	if not main.PM.validate():
+		main.writeError("")
+		main.writeError("#################################################")
+		main.writeError("#   Error validating parameters, cannot save.   #")
+		return False
+	
+	saveProgramSettings(main)
+	print(f"[main func] Saving settings to {main.PM.get("projectPath")}")
+	
+	updateLastProjectsFile(main.PM.get("projectPath"),main.execPath)
+	
+	#print(main.PM.toString())
+	#main.PM.printTags()
+	saveProjectSettings(main)
 	
 	saveSeqFiles(main)
 	
@@ -267,7 +280,7 @@ def displayGraphs(main):
 		if graph.isScrollGraph:graph.parentnotebook.finish()
 	main.outputGraphicsNotebook.select(0)
 	
-	fontMultiplier = main.PM.get("fontMultiplierGUI")
+	fontMultiplier = main.PM.get("RNAival-font_multiplier_GUI")
 	#TODO seperate into re-draw function with other settings to re-apply
 	for graph in main.comboGraphs.values():
 		graph.drawOntoGui(fontMultiplier=fontMultiplier)
@@ -289,9 +302,9 @@ def exportGraphs(main):
 		print("[LoadGraphs] ERROR Data not loaded!")
 		return False
 	
-	exportW = main.PM.get("exportOverrideWidth")
-	exportH = main.PM.get("exportOverrideHeight")
-	fontMultiplier = main.PM.get("fontMultiplierSVG")
+	exportW = main.PM.get("RNAival-export_width")
+	exportH = main.PM.get("RNAival-export_height")
+	fontMultiplier = main.PM.get("RNAival-font_multiplier_SVG")
 	for graph in main.comboGraphs.values():
 		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",graph.bundleID,graph.psname)
 		Path(resultDir).mkdir(parents=True, exist_ok=True)
@@ -343,36 +356,39 @@ def writeError(main,text,terminalPrefix=""):
 	main.mainNotebook.select(main.logTabIndex)
 def writeWarning(main,text,terminalPrefix=""):
 	writeLog(main,text,warn=True,terminalPrefix=terminalPrefix)
-	
-def getStyledText(main,parent):
-	return main.styleman.getStyledText(parent)
-	
-def switchTheme(main):
-	if main.currentTheme == "light":
-		main.currentTheme="dark"
-		main.menubar.entryconfigure(3,label=" Lightmode ")
+
+def switchThemeDarkLight(main):	#switches between dark and the last (non-dark) theme
+	currentTheme = main.PM.get("currentTheme")
+	if currentTheme == "dark":
+		theme=main.lastTheme
+		main.lastTheme = "dark"
 	else:
-		main.currentTheme="light"
-		main.menubar.entryconfigure(3,label=" Darkmode ")
-	main.styleman.applyTheme(main.currentTheme)
+		main.lastTheme = currentTheme
+		theme="dark"
+	#print(f"[main func] Switching to theme {theme}")
+	setTheme(main,theme)
+
+def setTheme(main,theme):
+	main.PM.set("currentTheme",theme)
+	main.styleman.applyTheme(theme)
 	
 # ------------------------ Toggle Button + ToggleParameterFrame ------------------------
 def _toggleBoolButton(main,ID):	#Switches all buttons from the same group
 	if main.toggleButtonReferenceDict[ID][1].get():
 		for button in main.toggleButtonReferenceDict[ID][0]:
-			button["image"]=main.boxImage
+			button["image"]=main.box_empty
 		main.toggleButtonReferenceDict[ID][1].set(False)
 	else:
 		for button in main.toggleButtonReferenceDict[ID][0]:
-			button["image"]=main.xBoxImage
+			button["image"]=main.box_filled
 		main.toggleButtonReferenceDict[ID][1].set(True)
 
-def createTogglebutton(main,parent,boolVar,syncKey=None):	#Button the switches state when pressed
+def createTogglebutton(main,parent,boolVar,syncKey=None):	#Button that switches state when pressed || Checkbutton exists, but has other problems...
 	ID = len(main.toggleButtonReferenceDict.keys()) if syncKey is None else syncKey	#Can be synchronised with other buttons
-	tb = ThemedButton(parent,command=lambda main=main,i=ID: _toggleBoolButton(main,i),style="internalDropClosed.TButton",image=main.boxImage)
+	tb = ThemedButton(parent,command=lambda main=main,i=ID: _toggleBoolButton(main,i),style="FlatText.TButton",image=main.box_empty)
 	if not ID in main.toggleButtonReferenceDict:main.toggleButtonReferenceDict[ID] = [list(),boolVar]
 	main.toggleButtonReferenceDict[ID][0].append(tb)
-	if boolVar.get():tb["image"]=main.xBoxImage	#does not update when the underlying var changes state!
+	if boolVar.get():tb["image"]=main.box_filled	#does not update when the underlying var changes state!
 	return tb
 
 def makeParameterToggleFrame(main,parent,title,toggleVar=None):	#only used by dsp_eval, but can be used by other modules as well
@@ -397,18 +413,12 @@ def _openFoldoutFrame(main,foldoutID):	#call to toggle the foldout buttons with 
 	
 	if main.foldoutStates[foldoutID]:
 		main.foldoutStates[foldoutID]=False
-		fouldoutFrameTuple[0].configure(style="internalDropClosed.TButton")
-		fouldoutFrameTuple[1].configure(style="internalDropClosed.TButton")
-		fouldoutFrameTuple[2].configure(style="internalDropClosed.TButton")
-		fouldoutFrameTuple[2]["image"]=main.triDown
+		fouldoutFrameTuple[2]["image"]=main.triangle_down
 		fouldoutFrameTuple[3].pack_forget()
 		#fouldoutFrameTuple[4].configure(style="Raised.TFrame")	#change relief of frame where all the buttons and foldout are on
 	else:
 		main.foldoutStates[foldoutID]=True
-		fouldoutFrameTuple[0].configure(style="internalDropOpen.TButton")
-		fouldoutFrameTuple[1].configure(style="internalDropOpen.TButton")
-		fouldoutFrameTuple[2].configure(style="internalDropOpen.TButton")
-		fouldoutFrameTuple[2]["image"]=main.triUp
+		fouldoutFrameTuple[2]["image"]=main.triangle_up
 		fouldoutFrameTuple[3].pack(anchor="n",expand=True,fill="x",side="top",padx=main.frameBorderSize,pady=main.frameBorderSize)
 		#fouldoutFrameTuple[4].configure(style="Raised.TFrame")
 
@@ -420,14 +430,14 @@ def makeFoldoutFrame(main,parent,buttonText,isOpen=False):	#only used by input s
 	headerFrame = ThemedFrame(totalFrame)
 	headerFrame.pack(fill="x",expand=False,padx=main.frameBorderSize,pady=main.frameBorderSize)
 	
-	header_label = ThemedButton(headerFrame,text=buttonText,command=lambda i=ID: _openFoldoutFrame(main,i),style="internalDropClosed.TButton")
+	header_label = ThemedButton(headerFrame,text=buttonText,command=lambda i=ID: _openFoldoutFrame(main,i),style="FlatText.TButton")
 	header_label.bind("<Return>",lambda event, i=ID: main.openFoldout(i))	#Space is bound by default to activate buttons, return is not!
 	header_label.pack(anchor="w",expand=True,fill="both",side="left")
 	internalTextvar = StringVar()		#Var that stores and controls the number next to the description
-	header_var = ThemedButton(headerFrame,textvariable=internalTextvar,command=lambda i=ID: _openFoldoutFrame(main,i),style="internalDropClosed.TButton")
+	header_var = ThemedButton(headerFrame,textvariable=internalTextvar,command=lambda i=ID: _openFoldoutFrame(main,i),style="FlatText.TButton")
 	header_var.bind("<Return>",lambda event, i=ID: main.openFoldout(i))
 	header_var.pack(anchor="e",fill="y",side="left")
-	header_icon = ThemedButton(headerFrame,command=lambda i=ID: _openFoldoutFrame(main,i),style="internalDropClosed.TButton",image=main.triDown)
+	header_icon = ThemedButton(headerFrame,command=lambda i=ID: _openFoldoutFrame(main,i),style="FlatText.TButton",image=main.triangle_down)
 	header_icon.bind("<Return>",lambda event, i=ID: main.openFoldout(i))
 	header_icon.pack(anchor="e",fill="y",side="left")
 	
@@ -512,9 +522,10 @@ def loadProgramSettings(main):
 		main.writeError(str(e))
 		return False
 
-def saveProgramSettings(main):	#save is called only when you manually change the settings, otherwise it just uses the defautls (?)
-	generalSettingsDict = main.PM.getDict(tag="general")
+def saveProgramSettings(main):
+	generalSettingsDict = main.PM.getDict(tag=main.globalProgramSettingsKey)
 	settingsFile = os.path.join(main.execPath,"Settings.json")
+	print(f"[main func] Saving program settings to \"{settingsFile}\".")
 	try:
 		with open(settingsFile,"w") as jw:
 			json.dump(generalSettingsDict,jw,indent="\t",sort_keys=True)
@@ -528,3 +539,9 @@ def openSettingsMenu(main):
 		main.settingsMenu = SettingsMenu(main)	
 	else: #otherwise, it is always on top, so just center it
 		main.settingsMenu.center()
+
+def openAboutMenu(main):
+	if main.aboutMenu is None:	#If it doesnt exist, create it
+		main.aboutMenu = AboutMenu(main)	
+	else: #otherwise, raise it to top
+		main.aboutMenu.raisetoTop()

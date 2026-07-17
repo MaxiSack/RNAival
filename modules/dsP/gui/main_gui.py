@@ -1,14 +1,11 @@
 
-from tkinter import BooleanVar
-from tkinter import StringVar
-from tkinter import IntVar
 from tkinter.ttk import Label as ThemedLabel
 from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Button as ThemedButton
 from tkinter.ttk import Entry as ThemedEntry
 from tkinter.ttk import Radiobutton as ThemedRadioButton
 
-import gui.functions as gfs
+from gui.functions import createTogglebutton,makeParameterToggleFrame
 from graphs.drawGraphics import multiplyColour
 from gui.ScrollableFrame import ScrollableFrame
 
@@ -36,7 +33,7 @@ def getWantedgraphs(main):
 	# ------------------ colours ------------------------
 	highlightStyles = getColours(main)	#TODO update/unify this in loadGraphs with cols and styles
 	
-	hideLL = main.PM.get("dsP-_hideLabelsLegends")
+	hideLL = main.PM.get("RNAival-hide_Labels_Legends")
 	yAxisScale = main.PM.get("dsP-_yaxis")
 	doYAaxisAbundance = yAxisScale == "abundance" or yAxisScale == "both"
 	doYAaxisPercent = yAxisScale == "percent" or yAxisScale == "both"
@@ -231,7 +228,7 @@ def addLenCovColPair(main,length=None, colour=None):
 	
 	ThemedEntry(pairFrame,textvariable=lenVar).grid(column=0,row=0,sticky="ew",padx=main.frameBorderSize,pady=main.frameBorderSize)
 	ThemedEntry(pairFrame,textvariable=colVar).grid(column=1,row=0,sticky="ew",padx=main.frameBorderSize,pady=main.frameBorderSize)
-	ThemedButton(pairFrame,image=main.xImage_small,command = lambda main=main,i = pairID: deleteLenCovColPair(main,i),style="Exit.TButton").grid(column=3,row=0,sticky="ew")
+	ThemedButton(pairFrame,image=main.xImage,command = lambda main=main,i = pairID: deleteLenCovColPair(main,i),style="Exit.TButton").grid(column=3,row=0,sticky="ew")
 	
 	pairFrame.columnconfigure(0,weight=1,uniform="fred")
 	pairFrame.columnconfigure(1,weight=1,uniform="fred")
@@ -281,7 +278,7 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- length distribution -------------------
 	wantLendistGraphVar = main.PM.add("dsP-lenDist__doGraph","bool",True,"Boolerror","Wether to generate length-distribution graphs or not.",tag="dsP-lenDist")
-	lcountTotalFrame,lcountOptionsFrame,_ = gfs.makeParameterToggleFrame(
+	lcountTotalFrame,lcountOptionsFrame,_ = makeParameterToggleFrame(
 		main,graphSettingsColumn_1,"Length distribution",toggleVar=wantLendistGraphVar)
 	lcountTotalFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
@@ -313,7 +310,7 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- annotation counts -------------------
 	wantLendistGraphVar = main.PM.add("dsP-annotCount__doGraph","bool",True,"Boolerror","Wether to generate annotation count graphs or not.",tag="dsP-annotCount")
-	esiCountGraphTotalFrame,esiCountGraphOptionsFrame,_ = gfs.makeParameterToggleFrame(
+	esiCountGraphTotalFrame,esiCountGraphOptionsFrame,_ = makeParameterToggleFrame(
 		main,graphSettingsColumn_1,"Abundance of annotated RNAs",toggleVar=wantLendistGraphVar)
 	esiCountGraphTotalFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
@@ -337,7 +334,7 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- single-length startPos -------------------
 	wantStartPosGraphVar = main.PM.add("dsP-startPos__doGraph","bool",True,"Boolerror","Wether to generate start position graphs or not.",tag="dsP-startPos")
-	startPosTotalFrame,startPosOptionsFrame,_ = gfs.makeParameterToggleFrame(
+	startPosTotalFrame,startPosOptionsFrame,_ = makeParameterToggleFrame(
 		main,graphSettingsColumn_1,"Read distribution for specific length",toggleVar=wantStartPosGraphVar)
 	startPosTotalFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
@@ -365,7 +362,7 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- single-length Coverage -------------------
 	wantSingleLengthCoverageGraphVar = main.PM.add("dsP-singleCov__doGraph","bool",True,"Boolerror","Wether to generate start position graphs or not.",tag="dsP-singleCoverage")
-	coverageLenTotalFrame,coverageLenOptionsFrame,_ = gfs.makeParameterToggleFrame(
+	coverageLenTotalFrame,coverageLenOptionsFrame,_ = makeParameterToggleFrame(
 		main,graphSettingsColumn_2,"Coverage for individual lengths",toggleVar=wantSingleLengthCoverageGraphVar)
 	coverageLenTotalFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
@@ -389,7 +386,7 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- multi-length Coverage -------------------
 	wantStartPosGraphVar = main.PM.add("dsP-multiCov__doGraph","bool",True,"Boolerror","Wether to generate start position graphs or not.",tag="dsP-multiCoverage")
-	coverageMultiTotalFrame,coverageMultiOptionsFrame,_ = gfs.makeParameterToggleFrame(main,
+	coverageMultiTotalFrame,coverageMultiOptionsFrame,_ = makeParameterToggleFrame(main,
 		graphSettingsColumn_2,"Coverage for multiple lengths",toggleVar=wantStartPosGraphVar)
 	coverageMultiTotalFrame.pack(fill="both",expand=True)
 	
@@ -404,7 +401,7 @@ def add_dsP_eval_GUI(main):
 	pairDescFrame.grid(column=0,row=2,columnspan=2,sticky="news")
 	ThemedLabel(pairDescFrame,text=" Length").grid(column=0,row=0,sticky="news",pady=main.frameBorderSize)
 	ThemedLabel(pairDescFrame,text=" Colour (hex)").grid(column=1,row=0,sticky="news",pady=main.frameBorderSize)
-	ThemedButton(pairDescFrame,image=main.emptyImage_small,style="bg.TButton",state="disabled").grid(column=2,row=0,sticky="news",pady=main.frameBorderSize)
+	ThemedButton(pairDescFrame,image=main.emptyImage,style="FlatText.TButton",state="disabled").grid(column=2,row=0,sticky="news",pady=main.frameBorderSize)
 		
 	main.dsP_multiCovPairListWidgets = list()
 	dsP_multiCovPairListWidgetsOuterFrame = ScrollableFrame(coverageMultiOptionsFrame,style="wBorder.TFrame",innerFrame_style="wBorder.TFrame")
@@ -430,11 +427,11 @@ def add_dsP_eval_GUI(main):
 	
 	# ------------------- Heatmap -------------------
 	wantStartPosGraphVar = main.PM.add("dsP-heatmap__doGraph","bool",True,"Boolerror","Wether to generate start position graphs or not.",tag="dsP-heatmap")
-	heatmapTotalFrame,heatmapOptionsFrame,_ = gfs.makeParameterToggleFrame(
+	heatmapTotalFrame,heatmapOptionsFrame,_ = makeParameterToggleFrame(
 		main,graphSettingsColumn_3,"Heatmap",toggleVar=wantStartPosGraphVar)
 	heatmapTotalFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	ThemedLabel(heatmapOptionsFrame,text="Highlight esiRNAs",anchor="w").grid(column=0,row=0,sticky="w",padx=main.frameBorderSize)
-	gfs.createTogglebutton(main,heatmapOptionsFrame,main.PM.add("dsP-heatmap_highlightEsiRNABool","bool",True,
+	createTogglebutton(main,heatmapOptionsFrame,main.PM.add("dsP-heatmap_highlightEsiRNABool","bool",True,
 		"","",tag="dsP-heatmap")).grid(column=1,row=0,sticky="e")
 	ThemedLabel(heatmapOptionsFrame,text="Highlight other phase",anchor="w").grid(column=0,row=1,sticky="w",padx=main.frameBorderSize)
 	ThemedEntry(heatmapOptionsFrame,textvariable=main.PM.add("dsP-heatmap_highlightFrames","intList","",
@@ -474,12 +471,8 @@ def add_dsP_eval_GUI(main):
 	dsP_globalSettings.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	ThemedLabel(dsP_globalSettings,text="Global settings",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=4,sticky="w",padx=main.frameBorderSize)
 	
-	ThemedLabel(dsP_globalSettings,text="Hide Labels and Legends",anchor="w").grid(column=0,row=1,columnspan=3,sticky="ew",padx=main.frameBorderSize)
-	gfs.createTogglebutton(main,dsP_globalSettings,main.PM.add("dsP-_hideLabelsLegends","bool",False,"boolerror",
-		"Wether to hide axis labels and legends in graphs",tag="dsP-general")).grid(column=3,row=1,sticky="e")
-	
 	ThemedLabel(dsP_globalSettings,text="Synchronise Y-Axes between graphs",anchor="w").grid(column=0,row=2,columnspan=3,sticky="ew",padx=main.frameBorderSize)
-	gfs.createTogglebutton(main,dsP_globalSettings,main.PM.add("dsP-_globalYScale","bool",False,
+	createTogglebutton(main,dsP_globalSettings,main.PM.add("dsP-_globalYScale","bool",False,
 		"boolerror","Wether to synchronise Y-Axes between graphs of the same type",tag="dsP-general")).grid(column=3,row=2,sticky="e")
 	
 	ThemedLabel(dsP_globalSettings,text="Y-Axes (where applicable):",anchor="w").grid(column=0,row=3,columnspan=1,sticky="ew",padx=main.frameBorderSize)
@@ -488,12 +481,8 @@ def add_dsP_eval_GUI(main):
 	ThemedRadioButton(dsP_globalSettings,text="Percent",variable=strandVar,value="percent").grid(column=2,row=3,sticky="ew",padx=main.frameBorderSize)
 	ThemedRadioButton(dsP_globalSettings,text="Both",variable=strandVar,value="both").grid(column=3,row=3,sticky="ew",padx=main.frameBorderSize)
 	
-	ThemedLabel(dsP_globalSettings,text="Font multiplier [GUI]",anchor="w").grid(column=0,row=4,columnspan=2,sticky="w",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
-	ThemedEntry(dsP_globalSettings,textvariable=main.PM.add("fontMultiplierGUI","float",1.0,
-		"","")).grid(column=2,row=4,columnspan=2,sticky="e",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
-	
 	dsP_globalSettings.rowconfigure(0,weight=0)
-	dsP_globalSettings.rowconfigure(1,weight=0)	#TODO togglebuttons are a bit too large, compared to the label and entry lines...
+	dsP_globalSettings.rowconfigure(1,weight=0)
 	dsP_globalSettings.rowconfigure(2,weight=0)
 	dsP_globalSettings.rowconfigure(3,weight=0)
 	dsP_globalSettings.rowconfigure(4,weight=0)
@@ -529,28 +518,6 @@ def add_dsP_eval_GUI(main):
 	colourOptionsFrame.rowconfigure(2,weight=0)
 	colourOptionsFrame.rowconfigure(3,weight=0)
 	colourOptionsFrame.rowconfigure(4,weight=0)
-	
-	# ------------------ Export overrides ------------------------	#TODO currently affects ALL graphs ~should be some export settings / Program settings !
-	exportOverrideFrame = ThemedFrame(graphSettingsColumn_3)
-	exportOverrideFrame.pack(fill="both",pady=(0,main.frameBorderSize*2))
-	ThemedLabel(exportOverrideFrame,text="Export overrides",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=2,sticky="w",padx=main.frameBorderSize)
-	ThemedLabel(exportOverrideFrame,text="Width",anchor="w").grid(column=0,row=1,sticky="w",padx=main.frameBorderSize)
-	ThemedEntry(exportOverrideFrame,textvariable=main.PM.add("exportOverrideWidth","int",1500,
-		"","",tag="export")).grid(column=1,row=1,sticky="e",padx=main.frameBorderSize)
-	ThemedLabel(exportOverrideFrame,text="Heigth",anchor="w").grid(column=0,row=2,sticky="w",padx=main.frameBorderSize)
-	ThemedEntry(exportOverrideFrame,textvariable=main.PM.add("exportOverrideHeight","int",500,
-		"","",tag="export")).grid(column=1,row=2,sticky="e",padx=main.frameBorderSize)
-	ThemedLabel(exportOverrideFrame,text="Font multiplier [SVG]",anchor="w").grid(column=0,row=3,sticky="w",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
-	ThemedEntry(exportOverrideFrame,textvariable=main.PM.add("fontMultiplierSVG","float",1.0,
-		"","",tag="export")).grid(column=1,row=3,sticky="e",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
-	
-	exportOverrideFrame.columnconfigure(0,weight=1)
-	exportOverrideFrame.columnconfigure(1,weight=0)
-	
-	exportOverrideFrame.rowconfigure(0,weight=0)
-	exportOverrideFrame.rowconfigure(1,weight=0,uniform="fred")
-	exportOverrideFrame.rowconfigure(2,weight=0,uniform="fred")
-	exportOverrideFrame.rowconfigure(3,weight=0,uniform="fred")
 	
 	#column_1_buffer
 	ThemedFrame(graphSettingsColumn_1).pack(fill="both",expand=True)
