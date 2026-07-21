@@ -105,12 +105,12 @@ class Main():
 		functions.writeError(self,text,terminalPrefix=terminalPrefix)
 	def writeWarning(self,text,terminalPrefix=""):
 		functions.writeWarning(self,text,terminalPrefix=terminalPrefix)
-	def getGraphicsOutput(self):
+	def getGraphicsOutput(self):	#unused
 		return self.outputGraphicsNotebook
-	def showGraphicsTab(self):
-		self.mainNotebook.add(self.graphicsFrame)
-	def showTextOutputTab(self):
-		self.mainNotebook.add(self.outputTextField)
+	def showGraphicsTab(self):	#unused
+		self.mainNotebook.add(self.mainNotebooktabs[self.graphicsTabIndex])
+	def showTextOutputTab(self):	#is used
+		self.mainNotebook.add(self.mainNotebooktabs[self.textNotebookIndex])
 	def writeTextOutput(self,text):
 		self.outputTextField["state"]="normal"
 		self.outputTextField.insert("end","\n"+text)
@@ -229,7 +229,7 @@ class Main():
 	def openManual(main):
 		try:
 			system=platform.system()
-			if system=="Darvin":
+			if system=="Darwin":
 				subprocess.call(("open",os.path.join(main.execPath,"Manual.pdf")))
 			elif system=="Windows":
 				os.startfile(os.path.join(main.execPath,"Manual.pdf"))

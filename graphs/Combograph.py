@@ -193,7 +193,7 @@ class Combograph:
 		
 		if not self.descriptorFields is None:
 			if not self.hasWrittenHeader:
-				self.main.writeTextOutput("\t".join(self.descriptorFields))
+				self.main.writeTextOutput("#"+"\t".join(self.descriptorFields))
 				self.hasWrittenHeader = True
 			self.main.writeTextOutput("\t".join([str(v) for v in self.pointDescriptor[pos]]))
 	

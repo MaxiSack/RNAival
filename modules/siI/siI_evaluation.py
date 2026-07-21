@@ -62,28 +62,26 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		
 		
 		
-		descriptorFields = ["ID    ","3\' Pos","Cut Pos","5\' Pos","siRNA seq             ","binding seq           ",
-					"count siRNA","count control","foldchange","log2FC","diff","log2Diff",
-					"FCnorm","diffNorm","distNorm","revDist","score"]
+		descriptorFields = ["Source","ID    ","3\' Pos","Cut Pos","5\' Pos","siRNA seq            ","binding seq          ","count enriched"]
 		if strand==0:	#incase all reads are of interest, or just the one fitting against the target
-			pointDescriptor = [["siRNA-"+str(graphList[0][1][i][0]),	#ID = 5' Position on target
+			pointDescriptor = [[pairLabel,
+					"siRNA-"+str(graphList[0][1][i][0]),	#ID = 5' Position on target
 					graphList[0][1][i][0]+length-1,			#3' pos on target
 					str(graphList[0][1][i][0]+10)+"-"+str(graphList[0][1][i][0]+11),	#cut position on target
 					graphList[0][1][i][0],				#5' pos on target
 					targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],
 					getReverseSeq(targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],main=main),
-					graphList[0][1][i][1],				#enrichment count
-					"-","-","-","-","-","-","-","-","-","-"]
+					graphList[0][1][i][1]]				#enrichment count
 					 for i in range(len(graphList[0][1]))]
 		elif strand==1:
-			pointDescriptor = [["siRNA-"+str(graphList[0][1][i][0]+length-1),	#ID = 5' Position on target
+			pointDescriptor = [[pairLabel,
+					"siRNA-"+str(graphList[0][1][i][0]+length-1),	#ID = 5' Position on target
 					graphList[0][1][i][0],				#3' pos on target
 					str(graphList[0][1][i][0]+length-11)+"-"+str(graphList[0][1][i][0]+length-10),	#cut position on target
 					graphList[0][1][i][0]+length-1,			#5' pos on target
 					getReverseSeq(targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],main=main),
 					targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],
-					graphList[0][1][i][1],				#enrichment count
-					"-","-","-","-","-","-","-","-","-","-"]
+					graphList[0][1][i][1]]				#enrichment count
 					 for i in range(len(graphList[0][1]))]
 		
 		if len(graphList) ==1:
@@ -142,27 +140,34 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			
 			# ------------- fill out remaining fields -------------------
 			for i in range(len(points)):
-				pointDescriptor[i][7] = graphList[1][1][i][1]							#control count
-				pointDescriptor[i][8] = round((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1),3)		#FC
-				pointDescriptor[i][9] = round(log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),3)	#logFC
-				pointDescriptor[i][10] = graphList[0][1][i][1]-graphList[1][1][i][1]				#diff
-				pointDescriptor[i][11] = round(log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1),3)	#logDiff
+				descriptorFields.extend(["count control","foldchange","log2FC","diff","log2Diff"])
+				pointDescriptor[i].extend([
+					graphList[1][1][i][1],							#control count
+					round((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1),3),		#FC
+					round(log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),3),	#logFC
+					graphList[0][1][i][1]-graphList[1][1][i][1],				#diff
+					round(log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1),3)])	#logDiff
 			
 			maxLog2FC = max([log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)) for i in range(len(points))])
 			maxLog2Diff = max([log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1) for i in range(len(points))])
 			distScalar = 2**0.5	#sqrt(2) to bring the normed diagonal into [0,1]
 			if maxLog2FC>0 and maxLog2Diff>0:
 				for i in range(len(points)):
+					descriptorFields.extend(["FCnorm","diffNorm","distNorm","revDist","score"])
 					fcnorm = log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1))/maxLog2FC
-					pointDescriptor[i][12] = round(fcnorm,3)						#FC normed
 					diffnorm = log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1)/maxLog2Diff
-					pointDescriptor[i][13] = round(diffnorm,3)						#Diff normed
-					pointDescriptor[i][14] = round(((fcnorm)**2 + (diffnorm)**2)**0.5 /distScalar * (1 if fcnorm>0 else -1),3)	#Dist-to-(0,0)
-					pointDescriptor[i][15] = round(((1-fcnorm)**2 + (1-diffnorm)**2)**0.5 /distScalar + (1 if fcnorm<0 else 0),3)	#Dist-to-(max,max)
-					
-					pointDescriptor[i][-1] = round(1-pointDescriptor[i][15],3)				#score is always last
+					pointDescriptor[i].extend([
+						round(fcnorm,3),									#FC normed
+						round(diffnorm,3),									#Diff normed
+						round(((fcnorm)**2 + (diffnorm)**2)**0.5 /distScalar * (1 if fcnorm>0 else -1),3),	#Dist-to-(0,0)
+						round(((1-fcnorm)**2 + (1-diffnorm)**2)**0.5 /distScalar + (1 if fcnorm<0 else 0),3)])	#Dist-to-(max,max)
+					pointDescriptor[i].append(round(1-pointDescriptor[i][-1],3))					#score is always last
 			
-			graphV.addPointDescriptor(descriptorFields,pointDescriptor)
+			descriptorFieldsShort = descriptorFields[0:10]+[descriptorFields[-1]]
+			pointDescriptorShort = [None]*len(points)
+			for i in range(len(points)):
+				pointDescriptorShort[i] = pointDescriptor[i][0:10]+[pointDescriptor[i][-1]]
+			graphV.addPointDescriptor(descriptorFieldsShort,pointDescriptorShort)
 			
 			if False:
 				# ------------- Score graph -------------------
@@ -195,6 +200,9 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			fr.write("\t".join(descriptorFields)+"\n")
 			for point in bestSiRNAsRev:
 				fr.write("\t".join([str(v) for v in point])+"\n")
+		
+		#graphA.selectPoint() #TODO top 20 or so!
+		
 	
 	main.writeLog("done.\n")
 	return True

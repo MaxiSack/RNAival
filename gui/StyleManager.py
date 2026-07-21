@@ -253,7 +253,7 @@ class StyleManager:
 	
 	def getStyledMenu(self,parent):
 		menubar = Menu(parent)
-		menubar.config(font=self.main.buttonTextFont,fg=self.textColour,bg=self.backgroundColour,
+		menubar.config(font=self.main.textFont,fg=self.textColour,bg=self.backgroundColour,
 				activeforeground=self.textColour,activebackground=self.textBackgroundColour)
 		self.registredMenus.append(menubar)
 		return menubar

@@ -30,7 +30,7 @@ from gui.ScrollableNotebook import ScrollableNotebook
 def createNewProjectMenu(main):
 	#------------------------- new Project --------------------------------------------------
 	projectParentPath = askdirectory(title="Select location for project",initialdir=main.execPath)
-	if projectParentPath is None: return
+	if projectParentPath is None or projectParentPath == "":return	#canceled selection
 	if not isinstance(projectParentPath,str):return
 	
 	newWindow = Toplevel()
@@ -329,11 +329,9 @@ def writeLog(main,text,error=False,warn=False,terminalPrefix=""):
 	elif not terminalPrefix == "":print(terminalPrefix+text)
 	
 	main.outputTextLog["state"]="normal"
-	main.outputTextLog.insert("end","\n"+str(text))
-	#TODO loop over lines to handle multi-line errors	#But what about empty lines? do they cause errors with split("\n") ?
-	#instead of relying on seperate log queue entries!
-	if error:main.outputTextLog.tag_add("error","end-1c linestart","end-1c lineend")#only works with one-line output.....
-	if warn:main.outputTextLog.tag_add("warn","end-1c linestart","end-1c lineend")
+	if error: main.outputTextLog.insert("end","\n"+str(text),"error")
+	elif warn: main.outputTextLog.insert("end","\n"+str(text),"warn")
+	else: main.outputTextLog.insert("end","\n"+str(text))
 	main.outputTextLog["state"]="disabled"
 	main.outputTextLog.see("end")
 	try:
