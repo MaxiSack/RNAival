@@ -24,7 +24,7 @@ class AboutMenu():
 		mainframe = ThemedFrame(mainframeBase,style="TFrame")
 		mainframe.pack(padx=main.frameBorderSize,pady=main.frameBorderSize,fill="both",expand=True,anchor="nw")
 		
-		self.icon = PhotoImage(file = os.path.join(main.execPath,"sprites/IconSquished.png"))
+		self.icon = PhotoImage(file = os.path.join(main.execPath,"sprites/IconSquished_transparent.png"))
 		ThemedLabel(mainframe,image=self.icon,anchor="n").pack(anchor="n")
 		
 		#-------------- main text field --------------
