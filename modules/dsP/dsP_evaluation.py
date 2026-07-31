@@ -77,12 +77,9 @@ def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TOD
 	print("Done")
 
 def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highlightStyles=None):
-	
 	grouping = dict()
-	#print(f"[dsP eval] {selectedLibIDs}")
 	for libID in selectedLibIDs:
 		try:
-			#print(f"[dsP eval] {main.IM.getLib(libID).getCountfiles()}")
 			for target in main.IM.getLib(libID).getCountfiles():	#target = (bundleID,psname)
 				if not target[1] == main.IM.getLib(libID).ppt:continue	#only draw the currently selected Parameterset
 				if not target in grouping:grouping[target] = list()
@@ -115,7 +112,7 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 						pass
 		for dic in wantedgraphs:
 			dic["mainTargetSeqID"] = main.IM.getTarget(bundleID).mainSeqID	#mainTarget
-			dic["bundleID"] = bundleID	#mainTarget
+			dic["bundleID"] = bundleID
 			dic["psname"] = psname
 		#TODO fix highlightStyles, do we still need that?	highlightStyles is used to colour the bars, cols from graphdef is used for the legend. ????
 		loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation,highlightStyles=highlightStyles)

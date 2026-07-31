@@ -191,7 +191,7 @@ class ParameterManager():
 				self.parametertags[tag].remove(key)
 				if len(self.parametertags[tag])==0:
 					del self.parametertags[tag]
-		del self.parameterDict[key]
+		if key in self.parameterDict: del self.parameterDict[key]
 	
 	def reset(self,tags=None,tag=None,notTags=None):
 		if notTags is None:

@@ -1,5 +1,6 @@
 
 from graphs.Combograph import Combograph
+from .static import moduleID
 
 def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	doPercent=graphDef["percent"]
@@ -38,7 +39,7 @@ def addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=None):
 	graphKey = f"Length-Distribution"+("_percent" if doPercent else "")		#Used for dictionary key and filename
 	graphTitle = f"Length-Distribution"								#used as GUI and SVG graph title
 	tabName = f"Length-Distribution"+(" (percent)" if doPercent else "")		#Used as tab name
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -113,7 +114,7 @@ def addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlig
 	graphKey = f"RNA-Counts"+("_percent" if doPercent else "")	#could also be generalised to "annotated counts"
 	graphTitle = f"RNA Counts"
 	tabName = f"RNA Counts"+(" (percent)" if doPercent else "")
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	if len(graphList)>0:graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -172,7 +173,7 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 	graphKey = f"Read-Counts"+("_percent" if doPercent else "")
 	graphTitle = f"Read Counts"
 	tabName = f"Read Counts"+(" (percent)" if doPercent else "")
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -246,7 +247,7 @@ def addGraph_singleLengthCoverage(main,graphDef,libIDs,db,siRNAPos,annotation=No
 	graphKey = f"Coverage-{targetLen}"
 	graphTitle = f"Coverage of {targetLen}-nt long reads"
 	tabName = f"Coverage {targetLen}"
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -281,7 +282,7 @@ def addGraph_multiLengthCoverage(main,graphDef,libIDs,db):
 	graphKey = f"MultiCoverage_"+"".join(["l"+str(l) for l in targetLengths])
 	graphTitle = f"Coverage of multiple lengths"
 	tabName = f"MultiCoverage"
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="multiLine",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="multiLine",
 		legend=legend,xlab=graphDef["xlab"],ylab=graphDef["ylab"],lineColours=lineColours,
 		fileName=graphKey,tabName=tabName)
 	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -307,7 +308,7 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 	graphKey = f"FullCoverage"
 	graphTitle = f"Coverage over all lengths"
 	tabName = f"Full Coverage"
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="BAR2",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	graph.addData(graphList,globalYScale=graphDef["globalYScale"])
@@ -339,12 +340,13 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 	
 	#set of (pos,len)
 	highlighting = set()
-	for strand,entrylist in enumerate(annotation):
-		for feature in entrylist:
-			if strand==0:
-				highlighting.add((feature[0]-1,feature[1]+maxL+1-minL-minL+1))
-			else:
-				highlighting.add((feature[0]-1,feature[1]-minL))
+	if not annotation is None:
+		for strand,entrylist in enumerate(annotation):
+			for feature in entrylist:
+				if strand==0:
+					highlighting.add((feature[0]-1,feature[1]+maxL+1-minL-minL+1))
+				else:
+					highlighting.add((feature[0]-1,feature[1]-minL))
 	
 	for length in highlightFrames:
 		for i in range(0,db.seqLen,length):
@@ -361,7 +363,7 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 	graphKey = f"Heatmap"
 	graphTitle = f"Heatmap over all lengths and positions"
 	tabName = f"Heatmap"
-	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"],graphType="HEAT",
+	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="HEAT",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
 	graph.bundleID=graphDef["bundleID"]
@@ -369,12 +371,26 @@ def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=Non
 	graph.addData(graphList,colourscale_define=colourscale_define)
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
+def getGraphKey(graphDef):
+	if graphDef[0]=="startPos":
+		doPercent=graphDef["percent"]
+		targetLen=graphDef["targetlen"]
+		graphKey = f"Read-Counts"+("_percent" if doPercent else "")
+	elif graphDef[0]=="singleCov":
+		targetLen=graphDef["targetlen"]
+		graphKey = f"Coverage-{targetLen}"
+	elif graphDef[0]=="multiCov":
+		targetLengths=[int(p[0]) for p in graphDef["targets"]]
+		graphKey = f"MultiCoverage_"+"".join(["l"+str(l) for l in targetLengths])
+	return graphKey
+
 def loadGraphs(main,db,libIDs,wantedgraphs,siRNAPos,annotation=None,highlightStyles=None):
 	for graphDef in wantedgraphs:	#create grpahs based on the data
 		if graphDef[0]=="lendist":
 			addGraph_LenDist(main,graphDef,libIDs,db,highlightStyles=highlightStyles)
 		elif graphDef[0]=="annotCount":
-			addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
+			if not annotation is None:
+				addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="startPos":
 			addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=annotation,highlightStyles=highlightStyles)
 		elif graphDef[0]=="singleCov":
@@ -387,4 +403,10 @@ def loadGraphs(main,db,libIDs,wantedgraphs,siRNAPos,annotation=None,highlightSty
 			addGraph_coverage(main,graphDef,libIDs,db)
 		else:
 			main.writeError(f"Unknown graph type: {graphDef[0]}",terminalPrefix="[dsP module]")
+	
+	connectGraphs = {"startPos","singleCov","multiCov"}
+	for graphDef in [g for g in wantedgraphs if g[0] in connectGraphs]:		#connecting all of these grphs afterwards
+		for graphDef2 in [g for g in wantedgraphs if g[0] in connectGraphs]:	#doesnt care about different lengths between single-length coverage
+			main.comboGraphs[getGraphKey(graphDef)+graphDef["bundleID"]+graphDef["psname"]].addConnectedGraph(
+				main.comboGraphs[getGraphKey(graphDef2)+graphDef2["bundleID"]+graphDef2["psname"]])
 

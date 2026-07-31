@@ -184,7 +184,9 @@ class InteractiveGraph:
 			xpos = self.xvals[index]
 			ypos = self.yvals[yindex]
 			
-			self.myGraphStats.set(f"{self.xlab}: {xpos}, {self.ylab}: {ypos}, Abundance: {self.graphData[index][yindex]}")
+			xlab = self.xlab if not self.xlab is None else "X"
+			ylab = self.ylab if not self.ylab is None else "Y"
+			self.myGraphStats.set(f"{xlab}: {xpos}, {ylab}: {ypos}, Abundance: {self.graphData[index][yindex]}")
 			
 			#print(self.highlightpositions)
 			
@@ -198,24 +200,42 @@ class InteractiveGraph:
 	
 	def selectPoint(self, pos):
 		#print(f"[IG][Debug] Selection point {pos} in {self.graphType}-{self.title}")
+		xlab = self.xlab if not self.xlab is None else "X"
+		ylab = self.ylab if not self.ylab is None else "Y"
+		
 		if self.graphType=="SCATTER":
 			point = self.graphData[pos]
-			self.myGraphStats.set(f"Position: {point[0]}, {self.xlab}: {point[1]}, {self.ylab}: {point[2]}")
+			self.myGraphStats.set(f"Position: {point[0]}, {xlab}: {round(point[1],3)}, {ylab}: {round(point[2],3)}")
 			self.canvas.itemconfig(self.dataObjects[pos][0],outline="#ff00c6")#"#ff5700")#"#ff00c6")#"#d800df")#"#00ffff")	#ff7700
 		elif self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
 			point = self.graphData[pos]
-			self.myGraphStats.set(f"{self.xlab}: {point[0]}, {self.ylab}: {point[1]}")
+			if len(point)==2:
+				self.myGraphStats.set(f"{xlab}: {point[0]}, {ylab}: {point[1]}")
+			elif len(point)==3:
+				self.myGraphStats.set(f"{xlab}: {point[0]}, {ylab}: +{point[1]}, -{point[2]}")
+			else: 
+				self.myGraphStats.set(f"{xlab}: {point[0]}, {ylab}: "+"; ".join([f"+{point[1+i*2]}, -{point[2+i*2]}" for i in range(int((len(point)-1)/2))]))
+			self.barhighlights[pos] = graphLib.createBarHighlight(self,pos+1)
+		elif self.graphType=="multiLine":
+			point = self.graphData[pos]
+			if self.legend is None:
+				self.myGraphStats.set(f"{xlab}: {point[0]}, {ylab}: "+
+					"; ".join([f"+{point[1+i*2]}, -{point[2+i*2]}" for i in range(int((len(point)-1)/2))]))
+			else:
+				self.myGraphStats.set(f"{xlab}: {point[0]}, {ylab}: "+
+					"; ".join([f"{desc}: +{point[1+i*2]}, -{point[2+i*2]}" for i,(col,desc) in enumerate(self.legend[1])]))
 			self.barhighlights[pos] = graphLib.createBarHighlight(self,pos+1)
 	
 	def clearPoint(self,pos):
 		if self.graphType=="SCATTER":
 			self.canvas.itemconfig(self.dataObjects[pos][0],outline="")
-		elif self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
+		elif self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX) or self.graphType=="multiLine":
 			self.canvas.delete(self.barhighlights[pos])
 	
 	def selectPointInAll(self,pos):	#this is actually an index for the datastructure
 		#print(f"[IG][Debug] Selecting all points at index {pos}")
 		#print(f"[IG][Debug] connectedCombos: {len(self.parentCombo.connectedGraphs)}")
+		#print(f"[IG][Debug] selecting pos {pos} for {self.parentCombo.selectedPoints}")
 		if pos in self.parentCombo.selectedPoints:
 			for comboGraph in self.parentCombo.connectedGraphs:
 				comboGraph.clearPoint(pos)
@@ -249,12 +269,12 @@ class InteractiveGraph:
 				barIndex = int((barx / self.xdataToPix))
 			else:
 				barIndex = int((barx / self.xdataToPix)-0.5)
-			yindex = int(ypoint / self.ydataToPix)
 			#print(f"\n[IG][Debug] Selected Position(index): {barIndex} {yindex} {round(event.y,2)} / {round(self.ybase)} {round(self.yzero)} {ypoint}")
 			if barIndex<len(self.graphData):
-				if self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX):
+				if self.graphType=="BAR" or (self.graphType=="BAR2" and not self.discreetX) or self.graphType=="multiLine":
 					self.selectPointInAll(barIndex)
 				else:
+					yindex = int(ypoint / self.ydataToPix)
 					self.updateDesc(barIndex,yindex,ypoint)
 		
 	#legend is a list of (Colour,String)
@@ -271,7 +291,7 @@ class InteractiveGraph:
 			self.colourscale,legendDesc = graphLib.getColourscale(self.graphData,colourscale_define)
 			self.legend=("Count:",legendDesc)
 			if -1 in self.yvals:self.legend[1].append(("#ff00ff","esiRNAs"))
-		elif self.graphType=="BAR2" or self.graphType=="multiLine" or self.graphType=="SCATTER":	#self.graphType=="BAR" BAR is now unused!
+		elif self.graphType=="BAR2" or self.graphType=="multiLine" or self.graphType=="SCATTER":
 			self.legend = legend
 		else:
 			print(f"\n[ERROR][IG] ERROR, could not identify graphtype!:\n{len(graphData[0])} {self.graphType}")

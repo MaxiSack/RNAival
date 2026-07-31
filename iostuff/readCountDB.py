@@ -17,7 +17,9 @@ class ReadCountsDatabase:
 		return self.readCounts[libID][strand][length][position-1]
 	
 	def getLengthCount(self,libID,strand,length):
-		return sum(self.readCounts[libID][strand][length])
+		if libID in self.readCounts and not self.readCounts[libID][strand][length] is None:
+			return sum(self.readCounts[libID][strand][length])
+		else: return 0
 	
 	def getPosCount(self,libID,strand,position):
 		if strand==0:

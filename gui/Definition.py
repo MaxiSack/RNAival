@@ -130,7 +130,7 @@ def defineGUI(main):
 	textScrollbar = ThemedScrollbar(textFrame)
 	textScrollbar.pack(fill="y",expand=False,padx=(main.frameBorderSize*2,0),pady=main.frameBorderSize*2,side="left")
 	main.outputTextField = main.styleman.getStyledText(textFrame)
-	main.outputTextField.config(tabs = "7c")
+	main.outputTextField.config(tabs = "3c")
 	main.outputTextField.pack(fill="both",expand=True,padx=(0,main.frameBorderSize*2),pady=main.frameBorderSize*2,side="right")
 	textScrollbar.config(command=main.outputTextField.yview)
 	main.outputTextField.config(yscrollcommand = textScrollbar.set)

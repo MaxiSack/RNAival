@@ -188,22 +188,22 @@ class InputManager():
 		fastaList = [self.targetDict[bundleID].mainTargetFasta]
 		fastaList.extend(offTargets)
 		self.targetDict[bundleID].fastaList = fastaList
-	def getTarget(self,targetID):	#This should never be able to throw an error, because targetID is always selected from the list of keys
-		return self.targetDict[targetID]
-	def hasTarget(self,targetID):
-		return targetID in self.targetDict
+	def getTarget(self,bundleID):	#This should never be able to throw an error, because targetID is always selected from the list of keys
+		return self.targetDict[bundleID]
+	def hasTarget(self,bundleID):	#targetID  == bundleID !!!
+		return bundleID in self.targetDict
 	def getTargets(self):
 		return self.targetDict.values()
 	def getTargetIDs(self):
 		return sorted(self.targetDict.keys())
 	
-	def addMapTarget(self,libID,targetID):	#TargetID can also be a tuple (mainTarget, genome1,genome2,...)
-		if targetID not in self.libDict[libID].mapTargets:
-			self.libDict[libID].mapTargets.insert(0,targetID)
+	def addMapTarget(self,libID,bundleID):	#TargetID can also be a tuple (mainTarget, genome1,genome2,...)
+		if bundleID not in self.libDict[libID].mapTargets:
+			self.libDict[libID].mapTargets.insert(0,bundleID)
 	def getMapTargets(self,libID):
 		return sorted(self.libDict[libID].mapTargets)
-	def removeMapTarget(self,libID,targetID):
-		self.libDict[libID].mapTargets.remove(targetID)
+	def removeMapTarget(self,libID,bundleID):
+		self.libDict[libID].mapTargets.remove(bundleID)
 	def addEvalType(self,libID,evalType):	#dsP, siI
 		if evalType not in self.libDict[libID].evalTypes:
 			self.libDict[libID].evalTypes.append(evalType)

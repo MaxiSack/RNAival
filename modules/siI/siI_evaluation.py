@@ -9,6 +9,8 @@ from graphs.Combograph import Combograph
 from functions.baseFunctions import getReverseSeq
 from graphs.drawGraphics import interpolateColoursFraction
 
+from .static import moduleID
+
 def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 	
 	if gui:main.writeLog("\n-------------------------------------------------------\nLoading siI data into GUI")
@@ -23,7 +25,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		main.writeError("\"Both\" is currently not supported for siI.")
 		return
 	print("[siI eval] Loading graphics")
-	#hideLabels = main.PM.get(RNAival-hide_Labels_Legends)	#TODO
+	hideLabels = main.PM.get("RNAival-hide_Labels_Legends")
 	for pair in libPairs:	#[(libPos,libNeg,label,TPS,start,end)]	#TPS = (bundleID,psname)
 		libIDs = pair[0]+pair[1]
 		pairLabel = pair[2]
@@ -47,7 +49,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			continue
 		#countData.printStats()
 		
-		axisLabelTemplate = [("5' Position","Abundance (enriched)"),("5' Position","Abundance (control)")]
+		axisLabelTemplate = [("5' Position on target","Abundance (enriched)"),("5' Position on target","Abundance (control)")]
 		axisLabels = list()
 		graphList = list()
 		for isControl in [0,1]:
@@ -87,10 +89,10 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		if len(graphList) ==1:
 			# ------------- Abundance Bar graph -------------------
 			graphKeyA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-			graphA = Combograph(main,graphKeyA,targetBundle.mainSeqID+"_"+psname,graphType="BAR",isScrollGraph=False)
+			graphA = Combograph(main,graphKeyA,targetBundle.mainSeqID+"_"+psname+"_"+moduleID,graphType="BAR2",isScrollGraph=False)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
-			graphA.addData(graphList,globalYScale=True,axislabels=axisLabels)
+			graphA.addData(graphList,globalYScale=True,axislabels=axisLabels if not hideLabels else None)
 			main.comboGraphs[graphKeyA+"_"+psname] = graphA
 			#print(f"[siI eval] Added {graphKeyA} to comboGraphs.")
 			
@@ -103,20 +105,20 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			graphKeyA = f"Abundance_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"		#Used for dictionary key and filename
 			graphTitleA = f"{pairLabel} - Abundance: l{length}, s{strand}, {regionStart}-{regionEnd}"	#used as GUI and SVG graph title
 			tabNameA = f"{pairLabel} - Abundance"											#Used as tab name
-			graphA = Combograph(main,graphTitleA,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False,fileName=graphKeyA,tabName=tabNameA)
+			graphA = Combograph(main,graphTitleA,targetBundle.mainSeqID+"_"+psname+"_"+moduleID,graphType="BAR2",isScrollGraph=False,fileName=graphKeyA,tabName=tabNameA)
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			counts2 = [(graphList[0][1][i][0],graphList[0][1][i][1],graphList[1][1][i][1])
 						 for i in range(len(graphList[0][1]))]
 			counts2Graph = ("",counts2)	#single graph gets no extra title
-			graphA.addData([counts2Graph],axislabels=[("5' Position","Abundance (enriched: +, control: -)")])
+			graphA.addData([counts2Graph],axislabels=[("5' Position on target","Abundance (enriched: +, control: -)")] if not hideLabels else None)
 			main.comboGraphs[graphKeyA+"_"+psname] = graphA
 			
 			# ------------- Volcano-like scatter graph -------------------
 			graphKeyV = f"Foldchange_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
 			graphTitleV = f"{pairLabel} - Foldchange: l{length}, s{strand}, {regionStart}-{regionEnd}"
 			tabNameV = f"{pairLabel} - Foldchange"
-			graphV = Combograph(main,graphTitleV,targetBundle.mainSeqID+"_"+psname,graphType="SCATTER",isScrollGraph=False,fileName=graphKeyV,tabName=tabNameV)
+			graphV = Combograph(main,graphTitleV,targetBundle.mainSeqID+"_"+psname+"_"+moduleID,graphType="SCATTER",isScrollGraph=False,fileName=graphKeyV,tabName=tabNameV)
 			graphV.bundleID=bundleID
 			graphV.psname=psname
 			points = [(graphList[0][1][i][0],log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
@@ -134,7 +136,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			#graphV.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],
 			#	axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
 			graphV.addData([("",points)],	#Only show volcano
-				axislabels=[("Log2 Foldchange","Log2 Difference")])
+				axislabels=[("Log2 Foldchange","Log2 Difference")] if not hideLabels else None)
 			
 			main.comboGraphs[graphKeyV+"_"+psname] = graphV
 			
@@ -172,7 +174,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			if False:
 				# ------------- Score graph -------------------
 				graphNameS = f"Score_{pairLabel}_l{length}-s{strand}_{regionStart}-{regionEnd}"
-				graphS = Combograph(main,graphNameS,targetBundle.mainSeqID+"_"+psname,graphType="BAR2",isScrollGraph=False)
+				graphS = Combograph(main,graphNameS,targetBundle.mainSeqID+"_"+psname+"_"+moduleID,graphType="BAR2",isScrollGraph=False)
 				graphS.bundleID=bundleID
 				graphS.psname=psname
 				scoreCounts = [(
@@ -200,8 +202,6 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			fr.write("\t".join(descriptorFields)+"\n")
 			for point in bestSiRNAsRev:
 				fr.write("\t".join([str(v) for v in point])+"\n")
-		
-		#graphA.selectPoint() #TODO top 20 or so!
 		
 	
 	main.writeLog("done.\n")

@@ -144,7 +144,7 @@ def updateSeqFileList(main):
 			
 			if fkey == "mapTargets":
 				targetVar = StringVar(value="-")
-				if len(libVals[fkey])>0:targetVar.set(main.IM.getTarget(libVals[fkey][0]).bundleID)
+				if len(libVals[fkey])>0:targetVar.set(libVals[fkey][0])
 				main.seqFileDict[libKey][fkey] = targetVar
 				ref = OptionMenu(main.seqFileListFrame,targetVar,*targetLabels)	# Target label is now also their ID
 				main.styleman.registredOptionMenus.append(ref)

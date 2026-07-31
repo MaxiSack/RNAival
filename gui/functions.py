@@ -4,6 +4,7 @@ import os.path
 from datetime import datetime
 from pathlib import Path
 from importlib import import_module
+import traceback
 
 from tkinter import BooleanVar
 from tkinter import StringVar
@@ -96,8 +97,11 @@ def initProject(main,pp):
 	main.logFile = os.path.join(logDir,"log_"+str(datetime.now()).replace(" ","_")+".txt")
 	main.mainWindow.title(f"RNAival - {os.path.basename(pp)}")
 	for module in main.moduleDict.values():
-		module.init_project(main)
-		#module.after_project_load(main)
+		try:
+			module.init_project(main)
+		except Exception as e:
+			main.writeError(f"Error running init_project from module \"{module.moduleID}\".")
+			main.writeError(str(e))
 
 def loadProject(main,pp):
 	settingsFile = os.path.join(pp,"ProjectSettings.json")
@@ -139,6 +143,7 @@ def loadProject(main,pp):
 				except Exception as e:
 					main.writeError(f"Error running after_project_load from module \"{module.moduleID}\".")
 					main.writeError(str(e))
+					traceback.print_exc()
 					
 			main.mainNotebook.select(0)
 			
@@ -155,6 +160,7 @@ def loadProject(main,pp):
 	except Exception as e:
 		main.writeError(f"Error loading project from \"{settingsFile}\".")
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 
 def loadProjectSelect(main):
@@ -186,6 +192,7 @@ def saveProjectSettings(main):
 	except Exception as e:
 		main.writeError(f"Error saving project settings to \"{projectSettingsPath}\".")
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 
 def saveSettings(main):
@@ -217,6 +224,7 @@ def saveSettings(main):
 	except Exception as e:
 		main.writeError(f"Error saving input settings to \"{inputSettingsPath}\".")
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 	
 def openProjectList():
@@ -248,9 +256,10 @@ def loadDataIntoGUI(main):
 			try:
 				module.evaluate(main)
 			except Exception as e:
-				main.writeError(f"[Error][Func] Evaluation module \"{module.moduleID}\" does not implement the function \"evaluate(main)\".")
-				main.writeError(f"[Error][Func] Or a different error occured during execution:")
+				main.writeError(f"Evaluation module \"{module.moduleID}\" does not implement the function \"evaluate(main)\".",terminalPrefix="[Error][Func]")
+				main.writeError(f"Or a different error occured during execution:",terminalPrefix="[Error][Func]")
 				main.writeError(str(e))
+				traceback.print_exc()
 	
 	displayGraphs(main)
 	
@@ -479,6 +488,7 @@ def loadModules(main):
 	except Exception as e:
 		main.writeError("ERROR! Exception getting modules from "+str(main.execdir))
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 	print(f"[main func] loading modules from {moduleDir}")
 	moduleDict = dict()
@@ -504,6 +514,7 @@ def loadModules(main):
 		except Exception as e:
 			main.writeError("ERROR! Exception with "+str(os.path.join(moduleDir,entry)))
 			main.writeError(str(e))
+			traceback.print_exc()
 			continue
 	return moduleDict
 
@@ -518,6 +529,7 @@ def loadProgramSettings(main):
 	except Exception as e:
 		main.writeError(f"Error reading program settings from \"{settingsFile}\".")
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 
 def saveProgramSettings(main):
@@ -530,6 +542,7 @@ def saveProgramSettings(main):
 	except Exception as e:
 		main.writeError(f"Error saving program settings to \"{settingsFile}\".")
 		main.writeError(str(e))
+		traceback.print_exc()
 		return False
 	
 def openSettingsMenu(main):

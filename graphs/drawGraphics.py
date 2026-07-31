@@ -323,11 +323,18 @@ def canvas_createBars(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_da
 		canvas.create_rectangle(x1,y1,x2,y2,fill="None",outline=highlightColour)
 	return bars
 
-def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,linewidth=2,lineColours=None,discreetX=False):
+def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,linewidth=2,lineColours=None,discreetX=False,
+		highlightpos=set(),highlightColour="#ff00ff"):
 	xdataToPix = x_dataSpace/(xmax-xmin+1)
 	ydataToPix = y_dataSpace/(ymax-ymin)
 	
+	graph.xbase = x_dataStart
 	yzero = y_dataStart + ymax * ydataToPix
+	graph.yzero = yzero
+	graph.xdataToPix = xdataToPix
+	graph.y_dataStart = y_dataStart
+	graph.y_dataSpace = y_dataSpace
+	graph.barradius = max(1,xdataToPix/2)
 	
 	if ymin<0:
 		canvas.create_line(x_dataStart,yzero,x_dataStart+x_dataSpace,yzero,fill="black",width=1)
@@ -340,6 +347,16 @@ def canvas_createLines(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_d
 	for j in range(len(data[0])-1,0,-1):
 		coords = [(x_dataStart + (p[0]-xmin) * xdataToPix,yzero - p[j] * ydataToPix * ((j%2)*2-1)) for p in data]
 		lines[j-1] = canvas.create_line(coords,fill=lineColours[j-1],width=linewidth)
+	
+	for i in highlightpos:
+		xcenter = x_dataStart+(data[i][0]-xmin)*xdataToPix
+		if discreetX:
+			xcenter+=xdataToPix/2
+		x1 = xcenter - graph.barradius
+		x2 = xcenter + graph.barradius
+		y1 = y_dataStart
+		y2 = y_dataStart+graph.y_dataSpace
+		canvas.create_rectangle(x1,y1,x2,y2,fill="None",outline=highlightColour)
 	return lines
 
 def canvas_createPoints(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,xmin,xmax,ymin,ymax,pointRadius=10,discreetX=False,fillColour="#000000",
@@ -560,7 +577,7 @@ def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphTyp
 			discreetX=discreetX,barcolours=barcolours,lineColour=lineColour,defBarcol=graph.styles["default"][0],
 			highlightpos=highlightpos,highlightColour=highlightColour)
 	
-	if graphType=="multiLine":
+	elif graphType=="multiLine":
 		if graph.lineColours is None:
 			lineColours = ["red","red","green","green","blue","blue"]
 		else:
@@ -568,16 +585,17 @@ def canvas_createPlot(graph,canvas,data,width,height,lineColour="black",graphTyp
 		dataObjects = canvas_createLines(graph,canvas,data,
 			x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
 			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
-			linewidth=5,lineColours=lineColours,discreetX=discreetX)
+			linewidth=5,lineColours=lineColours,discreetX=discreetX,
+			highlightpos=highlightpos,highlightColour=highlightColour)
 	
-	if graphType=="SCATTER":
+	elif graphType=="SCATTER":
 		dataObjects = canvas_createPoints(graph,canvas,data,
 			x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,
 			axis_x_min,axis_x_max,axis_y_min,axis_y_max,
 			pointRadius=pointRadius,discreetX=discreetX,fillColour=lineColour,
 			highlightpos=highlightpos,highlightColour=highlightColour)
 		
-	if graphType=="HEAT":
+	elif graphType=="HEAT":
 		dataObjects = canvas_createHeatmap(graph,canvas,data,x_dataStart,x_dataSpace,y_dataStart,y_dataSpace,colourscale,axis_x_max)
 	
 	canvas.close_group()	#data group end

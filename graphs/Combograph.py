@@ -63,7 +63,7 @@ class Combograph:
 		self.ybins = -1
 		self.ystep = -1
 		
-		self.connectedGraphs = list()
+		self.connectedGraphs = set()
 		self.addConnectedGraph(self)	#to update all IGS withing the same combo
 		self.selectedPoints = set()
 		self.hasWrittenHeader = False
@@ -183,7 +183,7 @@ class Combograph:
 			newGraph.drawGraph(graphWidth,graphCanvasHeight,fontMultiplier=fontMultiplier,pointRadius=pointRadius)
 	
 	def addConnectedGraph(self,comboGraph):#can send signals to another
-		self.connectedGraphs.append(comboGraph)
+		self.connectedGraphs.add(comboGraph)
 	
 	def selectPoint(self, pos):
 		#print(f"[Combo] ({self.title}) Selecting point {pos}")
@@ -198,7 +198,7 @@ class Combograph:
 			self.main.writeTextOutput("\t".join([str(v) for v in self.pointDescriptor[pos]]))
 	
 	def clearPoint(self, pos):
-		#print(f"[Combo] Clearing point at position {pos}")
+		#print(f"[Combo] [{self.title}] Clearing point at position {pos} from {self.selectedPoints}")
 		self.selectedPoints.remove(pos)
 		for igraph in self.IGdict.values():
 			igraph.clearPoint(pos)
@@ -229,7 +229,9 @@ class Combograph:
 		graphLib.svg_drawText(mySVG,graphWidth/2,titleFontsize,self.title,fontsize=int(titleFontsize),xanchor="middle",yanchor="middle")
 		
 		for i,(graphName,graphData) in enumerate(self.allGraphData.items()):
-			if not selectedGraphName is None and graphName!=selectedGraphName:continue
+			if not selectedGraphName is None:
+				if graphName!=selectedGraphName: continue
+				else: i=0
 			graphLib.svg_drawText(mySVG,graphWidth+int(7*fontMultiplier),(graphHeight+10)*i + titleOffset+graphHeight/2,str(graphName),
 				xanchor="middle",yanchor="bottom",rotation=90,fontsize=int(22*fontMultiplier))
 			canvas = graphLib.SVG_Canvas(mySVG,startx=0,starty=(graphHeight+10)*i + titleOffset,width=500,height=500)

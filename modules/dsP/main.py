@@ -10,6 +10,9 @@ def add_GUI(main):	#Called to create GUI elements and other things on Program st
 
 def init_project(main):	#called when a new project is created or an existing one is loaded
 	main.PM.deleteTags(["dsP-multiCoverage-tmp"])	#Delete tmp tags from PM so that they can be properly re-added next
+	for pair in main.dsP_multiCovPairListWidgets:	#delete previous widgets
+		if not pair is None: pair[0].destroy()
+	main.dsP_multiCovPairListWidgets = list()
 
 def after_project_load(main):	#called after project has been loaded, can be used to load custom stuff
 	dsPStoragePath = os.path.join(main.PM.get("projectPath"),"Parameters","dsP.json")

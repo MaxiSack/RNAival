@@ -10,7 +10,7 @@ from graphs.drawGraphics import multiplyColour
 from gui.ScrollableFrame import ScrollableFrame
 
 from ..dsP_evaluation import loadDataIntoGUI
-from ..static import moduleID
+from ..static import moduleID,moduleTags
 
 defaultColours = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"]
 
@@ -207,19 +207,17 @@ def loadData(main,export=True,gui=True):
 
 
 def deleteLenCovColPair(main,index):
-	#print("[main func] Deleting libID-pair "+str(index)+": "+str(pairList[index][1].get())+" "+str(pairList[index][2].get()))
 	main.dsP_multiCovPairListWidgets[index][0].destroy()
 	main.dsP_multiCovPairListWidgets[index]=None
 	main.PM.deleteParameter("dsP-multiCov_length-"+str(index))
 	main.PM.deleteParameter("dsP-multiCov_colour-"+str(index))
 
-def addLenCovColPair(main,length=None, colour=None):
+def addLenCovColPair(main, length, colour=None):
 	pairFrame = ThemedFrame(main.dsP_multiCovPairListFrame)
 	pairID = len(main.dsP_multiCovPairListWidgets)
-	
-	lenVar = main.PM.add("dsP-multiCov_length-"+str(pairID),"int","0",	#Add to PM for automatic validation and error reporting, but dont save to file
+	#print(f"Adding {pairID} with length {length}")
+	lenVar = main.PM.add("dsP-multiCov_length-"+str(pairID),"int", str(length),	#Add to PM for automatic validation and error reporting, but dont save to file
 		f"Length for multi-coverage length {length} needs to be an integer!","Length of reads to display coverage for.",tag="dsP-multiCoverage-tmp")
-	if not length is None:lenVar.set(str(length))
 	
 	defaultColour = defaultColours[pairID] if pairID<len(defaultColours) else "#000000"
 	colVar = main.PM.add("dsP-multiCov_colour-"+str(pairID),"colour",defaultColour,
@@ -241,13 +239,16 @@ def setMultiCovPairs(main,multiCoverageList=None):
 	for pairFrame,_,_ in main.dsP_multiCovPairListWidgets:	#delete previous widgets
 		pairFrame.destroy()
 	main.dsP_multiCovPairListWidgets = list()
-	
+	main.PM.deleteTags(["dsP-multiCoverage-tmp"])
 	if not multiCoverageList is None and len(multiCoverageList)>0:	#load list from project
 		for (length,colour) in multiCoverageList:
-			addLenCovColPair(main,length=length, colour=colour)
+			addLenCovColPair(main,length, colour=colour)
 	else:	#Provide default lengths 20-25
 		for length in range(20,26):
-			addLenCovColPair(main,length=length)
+			addLenCovColPair(main,length)
+
+def resetDSP(main):
+	main.PM.reset(tags=moduleTags)
 
 def add_dsP_eval_GUI(main):
 	if not "dsP" in main.evalTypes:main.evalTypes.append("dsP")
@@ -343,7 +344,7 @@ def add_dsP_eval_GUI(main):
 		"Startpos-lengths needs to be a comma separeted list of to be integers!","Comma separated list of lengths to dispaly",tag="dsP-startPos")).grid(
 			column=1,row=0,sticky="ew",padx=main.frameBorderSize)
 	ThemedLabel(startPosOptionsFrame,text="X-label",anchor="w").grid(column=0,row=1,columnspan=2,sticky="w",padx=main.frameBorderSize)
-	ThemedEntry(startPosOptionsFrame,textvariable=main.PM.add("dsP-startPos_xLab","text","5\'position",
+	ThemedEntry(startPosOptionsFrame,textvariable=main.PM.add("dsP-startPos_xLab","text","5\' position of read",
 		"Free Text","X-Label",tag="dsP-startPos")).grid(column=1,row=1,sticky="ew",padx=main.frameBorderSize)
 	ThemedLabel(startPosOptionsFrame,text="Y-label abundance",anchor="w").grid(column=0,row=2,columnspan=2,sticky="w",padx=main.frameBorderSize)
 	ThemedEntry(startPosOptionsFrame,textvariable=main.PM.add("dsP-startPos_yLab","text","Abundance",
@@ -414,8 +415,8 @@ def add_dsP_eval_GUI(main):
 	pairDescFrame.columnconfigure(1,weight=1,uniform="fred")
 	pairDescFrame.columnconfigure(2,weight=0)
 	
-	ThemedButton(main.dsP_multiCovPairListFrame,text="+",command = lambda main=main: 
-		addLenCovColPair(main),style="TButton").pack(fill="x",side="bottom")
+	ThemedButton(main.dsP_multiCovPairListFrame,text="+",command = lambda main=main,length=0: 
+		addLenCovColPair(main,length),style="TButton").pack(fill="x",side="bottom")
 	
 	coverageMultiOptionsFrame.columnconfigure(0,weight=1,uniform="fred")
 	coverageMultiOptionsFrame.columnconfigure(1,weight=1,uniform="fred")
@@ -449,7 +450,7 @@ def add_dsP_eval_GUI(main):
 		"Percentile needs to be an integer!","Percentile for the colouring function",tag="dsP-heatmap")).grid(column=1,row=4,sticky="e",padx=main.frameBorderSize)
 		
 	ThemedLabel(heatmapOptionsFrame,text="X-label",anchor="w").grid(column=0,row=5,sticky="w",padx=main.frameBorderSize)
-	ThemedEntry(heatmapOptionsFrame,textvariable=main.PM.add("dsP-heatmap_xLab","text","5'Position",
+	ThemedEntry(heatmapOptionsFrame,textvariable=main.PM.add("dsP-heatmap_xLab","text","5\' Position of read",
 		"Free Text","X-Label",tag="dsP-heatmap")).grid(column=1,row=5,sticky="ew",padx=main.frameBorderSize)
 	ThemedLabel(heatmapOptionsFrame,text="Y-label",anchor="w").grid(column=0,row=6,sticky="w",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
 	ThemedEntry(heatmapOptionsFrame,textvariable=main.PM.add("dsP-heatmap_yLab","text","Read length (nt)",
@@ -518,6 +519,10 @@ def add_dsP_eval_GUI(main):
 	colourOptionsFrame.rowconfigure(2,weight=0)
 	colourOptionsFrame.rowconfigure(3,weight=0)
 	colourOptionsFrame.rowconfigure(4,weight=0)
+	
+	
+	colourOptionsFrame = ThemedFrame(graphSettingsColumn_3)
+	ThemedButton(graphSettingsColumn_3,text="Reset to defaults",command=lambda main=main: resetDSP(main),style="Exit.TButton").pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
 	#column_1_buffer
 	ThemedFrame(graphSettingsColumn_1).pack(fill="both",expand=True)
