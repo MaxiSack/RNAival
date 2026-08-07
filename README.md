@@ -16,12 +16,13 @@ The installer will install miniforge into `~/RNAival_Dependencies` and install d
 The installer tries to create a desktop entry in usr/share/applications, which requires root-user priviliges, but is not critical for usage.
 On Windows/WSL, prefix the commands with "wsl" or switch to a WSL terminal beforehand.
 
-For more detailed installation instructions, see the manual.
+For more detailed installation instructions for windows, see the [manual](Manual.pdf).
 
 ## Run
 ```
 bash run.sh
 ```
+Or use your operating systems app search (on Linux or Windows).
 
 ## Basic usage
 - Create a new project
@@ -29,12 +30,19 @@ bash run.sh
 - Select target sequences (embl,fasta,fna.gz)
 - Select targets and evaluation types for libraries
 - Run the pipeline
+- Evaluate the results
 
+## Uninstallation
+```
+bash uninstall.sh
+```
+Will delete the installed dependencies and the desktop entries.
 
 # GUI overview
 
 The following excerpts from the GUI are based on data from Knoblich _et al._ 2023¹.
 They investigated protecting plants against the cucumber mosaic virus (CMV) by using specially designed dsRNAs that interact with the plant's RNA interference pathway.
+The [manual](Manual.pdf) contains more detailed analyses of the results.
 
 1. Knoblich, Marie, et al. "A new level of RNA-based plant protection: dsRNAs designed from functionally characterized siRNAs highly effective against Cucumber mosaic virus." 
 Nucleic Acids Research 53.5 (2025): [gkaf136](https://doi.org/10.1093/nar/gkaf136). 

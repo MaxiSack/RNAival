@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from importlib import import_module
 import traceback
+import platform
 
 from tkinter import BooleanVar
 from tkinter import StringVar
@@ -164,7 +165,10 @@ def loadProject(main,pp):
 		return False
 
 def loadProjectSelect(main):
-	settingsFile = askopenfilename(filetypes=[("Project settings file","ProjectSettings.json")],title="Select ProjectSettings.json from the project folder",initialdir=main.execPath)
+	settingsFile = askopenfilename(
+		filetypes=[("Project settings file",".json" if platform.system()=="Darwin" else "ProjectSettings.json")],
+		title="Select ProjectSettings.json from the project folder",
+		initialdir=main.execPath)
 	if isinstance(settingsFile,str) and settingsFile!="":
 		print("[main func] Loading project "+settingsFile)
 		loadProject(main,settingsFile.removesuffix("ProjectSettings.json"))

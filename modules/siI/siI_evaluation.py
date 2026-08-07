@@ -32,6 +32,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		bundleID,psname = pair[3]
 		regionStart = pair[4]
 		regionEnd = pair[5]
+		regionlength = regionEnd-regionStart+1
 		if len(libIDs)==0:
 			main.writeError(f"No libraries selected for siI-pair {pairLabel}!")
 			continue
@@ -55,7 +56,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 		for isControl in [0,1]:
 			nlibs = len(pair[isControl])
 			if nlibs==0:continue
-			data = [None]*(regionEnd-regionStart+1)
+			data = [None]*regionlength
 			for position in range(regionStart,regionEnd+1):
 				data[position-regionStart] = (position,int(sum([countData.getReadCount(libID,strand,length,position) for libID in pair[isControl]])/nlibs))
 			
@@ -74,7 +75,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 					targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],
 					getReverseSeq(targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],main=main),
 					graphList[0][1][i][1]]				#enrichment count
-					 for i in range(len(graphList[0][1]))]
+					 for i in range(regionlength)]
 		elif strand==1:
 			pointDescriptor = [[pairLabel,
 					"siRNA-"+str(graphList[0][1][i][0]+length-1),	#ID = 5' Position on target
@@ -84,7 +85,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 					getReverseSeq(targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],main=main),
 					targetBundle.mainSequence[graphList[0][1][i][0]-1:graphList[0][1][i][0]+length-1],
 					graphList[0][1][i][1]]				#enrichment count
-					 for i in range(len(graphList[0][1]))]
+					 for i in range(regionlength)]
 		
 		if len(graphList) ==1:
 			# ------------- Abundance Bar graph -------------------
@@ -96,8 +97,8 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			main.comboGraphs[graphKeyA+"_"+psname] = graphA
 			#print(f"[siI eval] Added {graphKeyA} to comboGraphs.")
 			
-			maxCount = max([graphList[0][1][i][1] for i in range(len(points))])
-			for i in range(len(points)):
+			maxCount = max([graphList[0][1][i][1] for i in range(regionlength)])
+			for i in range(regionlength):
 				pointDescriptor[i][-1] = round(graphList[0][1][i][1]/maxCount,3)
 			graphA.addPointDescriptor(descriptorFields,pointDescriptor)	#so that textoutput appears when a bar is selected
 		elif len(graphList) ==2:
@@ -109,7 +110,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			graphA.bundleID=bundleID
 			graphA.psname=psname
 			counts2 = [(graphList[0][1][i][0],graphList[0][1][i][1],graphList[1][1][i][1])
-						 for i in range(len(graphList[0][1]))]
+						 for i in range(regionlength)]
 			counts2Graph = ("",counts2)	#single graph gets no extra title
 			graphA.addData([counts2Graph],axislabels=[("5' Position on target","Abundance (enriched: +, control: -)")] if not hideLabels else None)
 			main.comboGraphs[graphKeyA+"_"+psname] = graphA
@@ -122,16 +123,16 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			graphV.bundleID=bundleID
 			graphV.psname=psname
 			points = [(graphList[0][1][i][0],log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)),log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
-					for i in range(len(graphList[0][1]))]
+					for i in range(regionlength)]
 			
 			# ------------- diff Bar graph -------------------
-			#pointHeatValues = [log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)) for i in range(len(graphList[0][1]))]
+			#pointHeatValues = [log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1)) for i in range(regionlength)]
 			#maxHeat = max(max(pointHeatValues),1)
 			#col1 = "#000000"
 			#col2 = "#00ff00"
 			#pointColours = [interpolateColoursFraction(val/maxHeat, col1, col2) for val in pointHeatValues]
 			#logPoolCounts = [(graphList[0][1][i][0],graphList[0][1][i][0],log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1))
-			#			 for i in range(len(graphList[0][1]))]
+			#			 for i in range(regionlength)]
 			#logPoolGraph = (graphList[0][0]+"_log",logPoolCounts)
 			#graphV.addData([(graphList[0][0]+"_Volcano",points),logPoolGraph],
 			#	axislabels=[("Log2 Foldchange","Log2 Difference"),("Position","Log2 Difference")])
@@ -181,7 +182,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 						graphList[0][1][i][0],
 						pointDescriptor[i][-1]  if pointDescriptor[i][-1]>0 else 0,
 						-pointDescriptor[i][-1] if pointDescriptor[i][-1]<0 else 0
-						) for i in range(len(graphList[0][1]))]
+						) for i in range(regionlength)]
 				scoreGraph = ("",scoreCounts)
 				graphS.addData([scoreGraph],axislabels=[("5' Position","Score")])
 				main.comboGraphs[graphNameS+"_"+psname] = graphS
