@@ -142,8 +142,8 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			main.comboGraphs[graphKeyV+"_"+psname] = graphV
 			
 			# ------------- fill out remaining fields -------------------
+			descriptorFields.extend(["count control","foldchange","log2FC","diff","log2Diff"])
 			for i in range(len(points)):
-				descriptorFields.extend(["count control","foldchange","log2FC","diff","log2Diff"])
 				pointDescriptor[i].extend([
 					graphList[1][1][i][1],							#control count
 					round((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1),3),		#FC
@@ -155,8 +155,8 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			maxLog2Diff = max([log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1) for i in range(len(points))])
 			distScalar = 2**0.5	#sqrt(2) to bring the normed diagonal into [0,1]
 			if maxLog2FC>0 and maxLog2Diff>0:
+				descriptorFields.extend(["FCnorm","diffNorm","distNorm","revDist","score"])
 				for i in range(len(points)):
-					descriptorFields.extend(["FCnorm","diffNorm","distNorm","revDist","score"])
 					fcnorm = log2((graphList[0][1][i][1]+1)/(graphList[1][1][i][1]+1))/maxLog2FC
 					diffnorm = log2(abs(graphList[0][1][i][1]-graphList[1][1][i][1])+1)/maxLog2Diff
 					pointDescriptor[i].extend([

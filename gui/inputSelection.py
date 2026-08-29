@@ -179,9 +179,9 @@ def updateSeqFileList(main):
 
 def selectMainTarget(main,menu):
 	mainTargetPath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.PM.get("projectPath"))
-	menu.mainTargetPath = mainTargetPath
 	print(f"[input] Selected {menu.mainTargetPath}")
-	
+	if not isinstance(mainTargetPath,str):return
+	menu.mainTargetPath = mainTargetPath
 	if menu.mainTargetPath.endswith(".embl"):
 		mainID,mainSequence,menu.annotation = seqIO.loadEMBL(menu.mainTargetPath,main=main)
 	else:

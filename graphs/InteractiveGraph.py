@@ -82,7 +82,7 @@ class InteractiveGraph:
 		
 	def saveAsFile(self):
 		
-		soloExtra = "" if self.fileSuffix is "" else "_"+self.fileSuffix
+		soloExtra = "" if self.fileSuffix == "" else "_"+self.fileSuffix
 		savePath = os.path.join(self.safePath,f"{self.parentCombo.fileName}{soloExtra}.svg")
 		resultsPath = asksaveasfilename(initialfile=savePath,filetypes=[("Scalable Vector Graphic",".svg")],initialdir=self.safePath)
 		self.parentCombo.exportAsSVG(resultsPath,self.plotWidth,self.plotHeight,1,selectedGraphName=self.title,overridePath=True)
