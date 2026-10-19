@@ -1,14 +1,14 @@
 
-from tkinter import OptionMenu	#
-from tkinter import StringVar	#
 from tkinter.ttk import Label as ThemedLabel
 from tkinter.ttk import Frame as ThemedFrame
 from tkinter.ttk import Button as ThemedButton
 from tkinter.ttk import Entry as ThemedEntry
 from tkinter.ttk import Radiobutton as ThemedRadioButton
 
-from ..siI_evaluation import loadDataIntoGUI
 from gui.ScrollableFrame import ScrollableFrame
+from gui.functions import createTogglebutton,makeParameterToggleFrame
+
+from ..siI_evaluation import loadDataIntoGUI
 from .siIPair import siIPair
 
 def getLibraryPairsFromGUI(main):
@@ -23,10 +23,14 @@ def getLibraryPairsFromGUI(main):
 			siI_Pairs_data.append(data)
 	return siI_Pairs_data
 
-def loadData(main,export=True,gui=True):
+def loadData(main,writeTableOutput=False):
 	libPairs = getLibraryPairsFromGUI(main)
 	params = main.PM.getDict(tag="siI-general")
-	return loadDataIntoGUI(main,libPairs,params,export=export,gui=gui)
+	tableParams=main.PM.getDict(tag="siI-tables")
+	if writeTableOutput:	#when pipelineRun, always write tables and load in GUI
+		for key in tableParams.keys():
+			tableParams[key]=True
+	return loadDataIntoGUI(main,libPairs,params,tableParams=tableParams)
 
 def resetPairs(main):
 	for pair in main.siI_pairList:
@@ -85,6 +89,26 @@ def add_siIGUI(main):	#add_siI_eval_GUI
 	ThemedRadioButton(settingsFrame,text="Forward",variable=strandVar,value="forward").grid(column=0,row=3,sticky="ew",padx=main.frameBorderSize)
 	ThemedRadioButton(settingsFrame,text="Reverse",variable=strandVar,value="reverse").grid(column=1,row=3,sticky="ew",padx=main.frameBorderSize)
 	ThemedRadioButton(settingsFrame,text="Both",variable=strandVar,value="both",state="disabled").grid(column=2,row=3,sticky="ew",padx=main.frameBorderSize)
+	
+	# ---------------- output table settings ---------------------
+	siI_tableSettings = ThemedFrame(settingsFrame)
+	siI_tableSettings.grid(column=0,row=4,columnspan=4,sticky="news",pady=(0,main.frameBorderSize*2))#pack(fill="both",pady=(0,main.frameBorderSize*2))
+	ThemedLabel(siI_tableSettings,text="siRNA candidate table settings",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=2,sticky="w",padx=main.frameBorderSize)
+	
+	ThemedLabel(siI_tableSettings,text="Load top siRNA candidates into GUI",anchor="w").grid(column=0,row=1,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,siI_tableSettings,main.PM.add("siI-siRNACandidatesGUI","bool",True,
+		"boolerror","Load RNA abundance stats into GUI; may crowd the textoutput",tag="siI-tables")).grid(column=1,row=1,sticky="e")
+	ThemedLabel(siI_tableSettings,text="Number of candidates:",anchor="w").grid(column=0,row=2,sticky="ew",padx=main.frameBorderSize)
+	ThemedEntry(siI_tableSettings,textvariable=main.PM.add("siI-siRNACandidatesAmount","int",30,
+		"siRNA length needs to be an integer!","Length of reads to analyse",tag="siI-tables"),width=6).grid(column=1,row=2,sticky="ew",padx=main.frameBorderSize)
+	ThemedLabel(siI_tableSettings,text="Write all siRNA candidates into file on reload",anchor="w").grid(column=0,row=3,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,siI_tableSettings,main.PM.add("siI-siRNACandidatesFile","bool",False,
+		"boolerror","Load RNA abundance stats into GUI; may crowd the textoutput",tag="siI-tables")).grid(column=1,row=3,sticky="e")
+	
+	siI_tableSettings.rowconfigure(0,weight=0)
+	siI_tableSettings.rowconfigure(1,weight=0)
+	siI_tableSettings.columnconfigure(0,weight=1)
+	siI_tableSettings.columnconfigure(1,weight=0)
 	
 	# ------------------- Library Pairing -----------------------
 	pairingFrame = ThemedFrame(siIEvalFrame)

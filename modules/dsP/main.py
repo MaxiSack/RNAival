@@ -54,4 +54,4 @@ def process(main):
 
 def evaluate(main):	#evaluate all libraries that use this module for evaluation
 	print(f"[dsP module] Loading graphics")
-	loadData(main,export=False,gui=False)
+	loadData(main,writeTableOutput=main.isPipelineRunning)

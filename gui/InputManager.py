@@ -1,6 +1,9 @@
 
 import os.path
+
 from pathlib import Path
+from shutil import copyfile
+
 import iostuff.seqFiles as seqIO
 from functions.baseFunctions import getLibName
 
@@ -28,11 +31,15 @@ class Library():
 		self.countFiles.add((bundleID,psname))
 	def getCountfiles(self):
 		return sorted(self.countFiles)
+	def getSelectedTarget(self):
+		if len(self.mapTargets)>0:
+			return self.mapTargets[0]
+		return "-"
 	def toString(self):
 		return f"{self.libID}:\t{self.r1}\t{self.r2}\t{self.ppt}\t{self.label}\t{self.comment}\t{self.mapTargets}\t{self.evalTypes}\t{self.psnames}\t{self.countFiles}"
 	def serialize(self):
 		return {"libID":self.libID,"r1":self.r1,"r2":self.r2,"ppt":self.ppt,"label":self.label,"comment":self.comment,
-			"mapTargets":sorted(self.mapTargets),"evalTypes":sorted(self.evalTypes),"psnames":sorted(self.psnames),"countFiles":sorted(self.countFiles)}
+			"mapTargets":self.mapTargets,"evalTypes":sorted(self.evalTypes),"psnames":sorted(self.psnames),"countFiles":sorted(self.countFiles)}
 def initLib(contentDict):
 	lib = Library(contentDict["libID"],contentDict["r1"],r2=contentDict["r2"],ppt=contentDict["ppt"],label=contentDict["label"],comment=contentDict["comment"])
 	lib.mapTargets = contentDict["mapTargets"]
@@ -60,20 +67,28 @@ class TargetSequenceBundle():
 	def loadAnnotation(self,main=None):	#load annotation from mainTarget
 		if not self.mainTarget.endswith(".embl"):return
 		#print(f"[IM TB] Loading {self.mainTarget}")
-		self.mainSeqID,self.mainSequence,self.annotation = seqIO.loadEMBL(self.mainTarget,main=main)
+		mainTarget = os.path.join(main.PM.get("projectPath"),self.mainTarget) if self.mainTarget.startswith("fasta") else self.mainTarget
+		self.mainSeqID,self.mainSequence,self.annotation = seqIO.loadEMBL(mainTarget,main=main)
 	def loadMainTarget(self,main=None):
 		if self.mainTarget.endswith(".embl"):
 			self.loadAnnotation(main=main)
 		else:
-			self.mainSeqID,self.mainSequence = seqIO.loadFasta(self.mainTarget,main=main)
+			mainTarget = os.path.join(main.PM.get("projectPath"),self.mainTarget) if self.mainTarget.startswith(".") else self.mainTarget
+			self.mainSeqID,self.mainSequence = seqIO.loadFasta(mainTarget,main=main)
 			self.mainTargetFasta = self.mainTarget
 		if not self.mainSequence is None:self.mainLength = len(self.mainSequence)
 	def saveMainTargetLocally(self,projectPath):	#called when bundle is created
+		localFilePath = os.path.join("fasta",os.path.basename(self.mainTarget))
+		global_localFilePath = os.path.join(projectPath,localFilePath)
+		print(f"[IM] Storing file {self.mainTarget} locally as {global_localFilePath}.")
 		fastaPath = os.path.join(projectPath,"fasta")
 		Path(fastaPath).mkdir(parents=True, exist_ok=True)
-		self.mainTargetFasta = os.path.join(fastaPath,self.mainSeqID+".fasta")
-		if not os.path.isfile(self.mainTargetFasta):	#create fasta from embl for bowtie
-			with open(self.mainTargetFasta,"w") as fastawriter:
+		copyfile(self.mainTarget,global_localFilePath)	#copy file locally and replace global reference with local one
+		self.mainTarget = localFilePath
+		global_mainTargetFasta = os.path.join(fastaPath,self.mainSeqID+".fasta")
+		self.mainTargetFasta = os.path.join("fasta",self.mainSeqID+".fasta")
+		if not os.path.isfile(global_mainTargetFasta):	#create fasta from embl (or ".fa") for bowtie
+			with open(global_mainTargetFasta,"w") as fastawriter:
 				fastawriter.write(">"+self.mainSeqID+"\n"+self.mainSequence)
 	def toString(self):
 		return f"{self.bundleID}:\t{self.mainTarget}\t{self.offTargets}"
@@ -181,10 +196,10 @@ class InputManager():
 		self.targetDict[bundleID].mainTarget = mainTarget
 		self.targetDict[bundleID].offTargets = offTargets
 		
-		#convert maintarget to fasta if emble
+		#store maintarget locally, convert to fasta if emble
 		self.targetDict[bundleID].loadMainTarget(main=main)
 		self.targetDict[bundleID].saveMainTargetLocally(main.PM.get("projectPath"))
-		#and properly set the fastalist!
+		#and properly set the fastalist
 		fastaList = [self.targetDict[bundleID].mainTargetFasta]
 		fastaList.extend(offTargets)
 		self.targetDict[bundleID].fastaList = fastaList
@@ -200,7 +215,10 @@ class InputManager():
 	def addMapTarget(self,libID,bundleID):	#TargetID can also be a tuple (mainTarget, genome1,genome2,...)
 		if bundleID not in self.libDict[libID].mapTargets:
 			self.libDict[libID].mapTargets.insert(0,bundleID)
-	def getMapTargets(self,libID):
+		else:
+			self.libDict[libID].mapTargets.remove(bundleID)
+			self.libDict[libID].mapTargets.insert(0,bundleID)
+	def getMapTargets(self,libID):	#unused currently
 		return sorted(self.libDict[libID].mapTargets)
 	def removeMapTarget(self,libID,bundleID):
 		self.libDict[libID].mapTargets.remove(bundleID)
@@ -244,7 +262,10 @@ class InputManager():
 	def setAll(self,varList,main=None):
 		print("[IM] Setting all")
 		if len(varList)==6:	#backwards compatibility; load siIPairs from inputfiles.json
-			_,libDict,_,targetDict,_,self.siiPairs = varList	#TODO assert / ensure _ = key (see above)	# or use a dicttionary!
+			if len(varList[5])>0:
+				_,libDict,_,targetDict,_,self.siiPairs = varList
+			else:
+				_,libDict,_,targetDict,_,_ = varList	#dont add self.siiPairs if its empty; convert to new system
 		elif len(varList)==4:	#new system with siIPairs stored and managed separately by the siI module
 			_,libDict,_,targetDict = varList
 		else:

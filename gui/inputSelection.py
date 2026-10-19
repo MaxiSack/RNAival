@@ -79,6 +79,40 @@ def deleteLibrary(main,libKey):
 	#main.IM.removeLib(libKey)	#remove lib
 	#updateSeqFileList(main)	#update list
 
+def _setSelectionState(main,libID,newState):
+	main.input_selectionDict[libID][0]=newState
+	main.input_selectionDict[libID][1]["image"] = main.box_filled if newState else main.box_empty
+
+def _toggle_selectionState(main,libID):
+	_setSelectionState(main,libID, not main.input_selectionDict[libID][0])
+
+def _selectAllLibraries(main,newState):
+	main.input_selectAllButton["image"] = main.box_filled if newState else main.box_empty
+	main.input_selectAllBool = newState
+	for libID in main.input_selectionDict.keys():
+		_setSelectionState(main,libID,newState)
+
+def _toggle_selectAllLibraries(main):
+	_selectAllLibraries(main,not main.input_selectAllBool)
+
+def _modifySelected(main):
+	comment = main.input_bulkCommentVar.get()
+	ps = main.input_bulkPSVar.get()
+	target = main.input_bulkTargetVar.get()
+	evalType = main.input_bulkEvalVar.get()
+	#print(f"[Input] Bulk modification: {comment}, {ps}, {target}, {evalType}")
+	#print("SelectedStates:\n"+"\n".join([f"{k}:\t{v[0]}" for k,v in main.input_selectionDict.items()]))
+	main.input_bulkCommentVar.set("")
+	main.input_bulkPSVar.set("-")
+	main.input_bulkTargetVar.set("-")
+	main.input_bulkEvalVar.set("-")
+	for libID,statePair in main.input_selectionDict.items():
+		if statePair[0]:
+			if comment!="":main.seqFileDict[libID]["comment"].set(comment)	#ignore if nothing selected ("")
+			if ps!="-":main.seqFileDict[libID]["PS"].set(ps)		#ignore if nothing selected ("-")
+			if target!="-":main.seqFileDict[libID]["mapTargets"].set(target)
+			if evalType!="-":main.seqFileDict[libID]["evalTypes"].set(evalType)
+
 def updateSeqFileList(main):
 	print("[input] Updating input file list")
 	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
@@ -88,16 +122,69 @@ def updateSeqFileList(main):
 	main.seqFileDict = dict()
 	for child in main.seqFileListFrame.winfo_children():child.destroy()	#delete all existing widgeds, then re-add them
 	
+	main.input_selectionDict = dict()
+	
 	row=0
+	#Table header
 	desc=["Label","Comment","Pre-processing","Targets","Evaluation"]
 	for column,colDesc in enumerate(desc):
-		ThemedLabel(main.seqFileListFrame,text=colDesc,anchor="w").grid(column=column,row=row,sticky="ew")
-	fieldKeys=["label","comment","PS","mapTargets","evalTypes"]
-	#print(f"[Input] PS-keys: {main.PM.getParameterSetKeys()}")
-	targetLabels = [main.IM.getTarget(bundleID).bundleID for bundleID in main.mapTargets]
-	if len(targetLabels)==0:targetLabels=["-"]
+		ThemedLabel(main.seqFileListFrame,text=colDesc,anchor="w").grid(column=column+1,row=row,sticky="ew")
+	
 	PSkeys = main.PM.getParameterSetKeys()
 	psCount = len(PSkeys)
+	targetLabels = [main.IM.getTarget(bundleID).bundleID for bundleID in main.mapTargets]
+	if len(targetLabels)==0:targetLabels=["-"]
+	
+	#Bulk modification
+	row+=1
+	#SelectAll button
+	main.input_selectAllBool = False
+	main.input_selectAllButton = ThemedButton(main.seqFileListFrame,command=lambda main=main: _toggle_selectAllLibraries(main),style="FlatText.TButton",image=main.box_empty)
+	main.input_selectAllButton.grid(column=0,row=row,sticky="ew")
+	#desc
+	descFrame = ThemedFrame(main.seqFileListFrame)
+	descFrame.grid(column=1,row=row,sticky="ew")
+	ThemedLabel(descFrame,text="Bulk modification",anchor="w").grid(column=0,row=0,sticky="ew")
+	#ThemedButton(descFrame,text="Apply",command=lambda main=main:_modifySelected(main)).grid(column=2,row=0,sticky="ew")
+	labelButton = ThemedLabel(descFrame,text=" Apply ",anchor="w",style="Button.TLabel")
+	labelButton.grid(column=1,row=0,sticky="ew",padx=main.frameBorderSize)
+	labelButton.bind("<Button-1>",lambda event,main=main:_modifySelected(main))
+	descFrame.columnconfigure(0,weight=1)
+	descFrame.columnconfigure(2,weight=0)
+	
+	#comment
+	main.input_bulkCommentVar = StringVar(value="")	#but dont overwrite if the field is empty
+	ThemedEntry(main.seqFileListFrame,textvariable=main.input_bulkCommentVar).grid(column=2,row=row,sticky="ew")
+	#parameterset for pre-processing
+	main.input_bulkPSVar = StringVar(value="-")	#dont overwrite if nothing selected here!
+	ref = OptionMenu(main.seqFileListFrame,main.input_bulkPSVar,"-",*PSkeys)
+	main.styleman.registredOptionMenus.append(ref)
+	ref.grid(column=3,row=row,sticky="ew")
+	ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	#target
+	main.input_bulkTargetVar = StringVar(value="-")	#dont overwrite if nothing selected here!
+	ref = OptionMenu(main.seqFileListFrame,main.input_bulkTargetVar,"-",*targetLabels)
+	main.styleman.registredOptionMenus.append(ref)
+	ref.grid(column=4,row=row,sticky="ew")
+	ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	#evaluation
+	main.input_bulkEvalVar = StringVar(value="-")	#dont overwrite if nothing selected here!
+	ref = OptionMenu(main.seqFileListFrame,main.input_bulkEvalVar,"-",*main.evalTypes)
+	main.styleman.registredOptionMenus.append(ref)
+	ref.grid(column=5,row=row,sticky="ew")
+	ref.config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	ref["menu"].config(bg=main.styleman.backgroundColour,fg=main.styleman.textColour,font=main.logFont,
+		activeforeground=main.styleman.textColour,activebackground=main.styleman.textBackgroundColour)
+	
+	fieldKeys=["selectlib","label","comment","PS","mapTargets","evalTypes"]
+	#print(f"[Input] PS-keys: {main.PM.getParameterSetKeys()}")
 	#print(f"[Input] Target-labels: {targetLabels}")
 	#print(f"[input][Debug] updateSeqFileList init took {time.time()-starttime} seconds\n")
 	lasttime = time.time()
@@ -108,7 +195,12 @@ def updateSeqFileList(main):
 		main.seqFileDict[libKey] = dict()
 		for column,fkey in enumerate(fieldKeys):
 			ref = None
-			if fkey == "libID":
+			if fkey == "selectlib":
+				ref = ThemedButton(main.seqFileListFrame,command=lambda main=main,libID=libVals['libID']: _toggle_selectionState(main,libID),
+					style="FlatText.TButton",image=main.box_empty)
+				main.input_selectionDict[libVals['libID']] = [False,ref]
+				ref.grid(column=column,row=row,sticky="ew")
+			if fkey == "libID":	#TODO unused!	#displayes the libID	#separate form the label	#re-add and make the label actually free!
 				ref = ThemedLabel(main.seqFileListFrame,text=libVals[fkey],anchor="w")
 				ref.grid(column=column,row=row,sticky="ew")
 			if fkey == "label":
@@ -178,14 +270,14 @@ def updateSeqFileList(main):
 	#print(f"[input] Stylemen optionMenus: {len(main.styleman.registredOptionMenus)}")
 
 def selectMainTarget(main,menu):
-	mainTargetPath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.PM.get("projectPath"))
-	print(f"[input] Selected {menu.mainTargetPath}")
-	if not isinstance(mainTargetPath,str):return
-	menu.mainTargetPath = mainTargetPath
+	globalFilePath = askopenfilename(filetypes=[("EMBL",".embl"),("Fasta",".fasta .fa")],title="Select the main target",initialdir=main.PM.get("projectPath"))
+	print(f"[input] Selected {globalFilePath}")
+	if not isinstance(globalFilePath,str):return
+	menu.mainTargetPath = globalFilePath
 	if menu.mainTargetPath.endswith(".embl"):
-		mainID,mainSequence,menu.annotation = seqIO.loadEMBL(menu.mainTargetPath,main=main)
+		mainID,mainSequence,menu.annotation = seqIO.loadEMBL(globalFilePath,main=main)
 	else:
-		mainID,mainSequence = seqIO.loadFasta(menu.mainTargetPath,main=main)
+		mainID,mainSequence = seqIO.loadFasta(globalFilePath,main=main)
 	if not mainSequence is None:
 		menu.mainIDVar.set(mainID)
 		menu.mainLengthVar.set(len(mainSequence))
@@ -396,12 +488,13 @@ def add_inputGUI(main):
 	main.styleman.registredBG.append(seqFileListBaseFrame)
 	
 	main.seqFileListFrame = seqFileListBaseFrame.getInnerFrame()
-	main.seqFileListFrame.columnconfigure(0,weight=2)	# Label
-	main.seqFileListFrame.columnconfigure(1,weight=2)	# Comment
-	main.seqFileListFrame.columnconfigure(2,weight=0)	# PPT
-	main.seqFileListFrame.columnconfigure(3,weight=0)	# Target
-	main.seqFileListFrame.columnconfigure(4,weight=0)	# Evaltype
-	main.seqFileListFrame.columnconfigure(5,weight=0)	# X
+	main.seqFileListFrame.columnconfigure(0,weight=0)	# Bulk modify
+	main.seqFileListFrame.columnconfigure(1,weight=1)	# Label
+	main.seqFileListFrame.columnconfigure(2,weight=1)	# Comment
+	main.seqFileListFrame.columnconfigure(3,weight=0)	# PPT
+	main.seqFileListFrame.columnconfigure(4,weight=0)	# Target
+	main.seqFileListFrame.columnconfigure(5,weight=0)	# Evaltype
+	main.seqFileListFrame.columnconfigure(6,weight=0)	# X
 	main.seqFileDict = dict()
 	
 	ThemedButton(inputFrame_seqFiles,text="Save Changes",command=lambda main=main:saveSeqFiles(main)).grid(column=0,row=3,columnspan=2,sticky="news")

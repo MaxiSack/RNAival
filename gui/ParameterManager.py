@@ -142,7 +142,10 @@ class ParameterManager():
 		return self.parameterDict[name][0]
 	
 	def set(self,name,value):
-		self.parameterDict[name][0].set(value)
+		if self.parameterDict[name][1]=="intList":	#intlist are stored as comma-separated string in StringVar; access through get() returns a proper int-list
+			self.parameterDict[name][0].set(", ".join([str(v) for v in value]))
+		else:
+			self.parameterDict[name][0].set(value)
 	
 	def hasKey(self,name):
 		return name in self.parameterDict

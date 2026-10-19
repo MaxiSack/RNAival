@@ -37,6 +37,7 @@ class Main():
 		self.killSignal = [False]
 		self.mainWindow.protocol("WM_DELETE_WINDOW",self.closeWindow)
 		self.pipelineError = False
+		self.isPipelineRunning = False	#Flag so that modules can query wether they are called as part of the pipeline run or not
 		
 		self.globalProgramSettingsKey = "global_program"
 		self.localProjectSettingsKey = "local_project"
@@ -134,57 +135,61 @@ class Main():
 			self.runningThreads = list()
 			self.writeWarning("All Threads killed")
 			self.commsQueue.put(("WARN","All Threads killed"))
+		self.isPipelineRunning = False
 	def closeWindow(self):
 		self.terminateThreads()
 		print("[Main] Exiting")
 		self.saveProgramSettings()
 		self.getMain().destroy()
 	
-	def runPipeline(main):
-		main.saveSettings()
-		main.writeLog("-"*100,terminalPrefix="---")
-		main.writeLog(f"Processing all files ...",terminalPrefix="[Main] ")
-		main.writeLog("-"*100,terminalPrefix="---")
-		main.pipeStartTime = time.time()
+	def runPipeline(self):
+		self.isPipelineRunning = True
+		self.saveSettings()
+		self.writeLog("-"*100,terminalPrefix="---")
+		self.writeLog(f"Processing all files ...",terminalPrefix="[Main] ")
+		self.writeLog("-"*100,terminalPrefix="---")
+		self.pipeStartTime = time.time()
 		usedParameterSets = set()
-		for libID,lib in main.IM.getLibraries().items():
+		for libID,lib in self.IM.getLibraries().items():
 			if lib.ppt=="-":continue
 			usedParameterSets.add(lib.ppt)	#only process the currently selected Parameterset
 		print(f"[main run] Found PS: {usedParameterSets}")
 		neededModules = set()
 		for psname in usedParameterSets:
-			neededModules.add(main.PM.getParameterSet(psname)[".moduleID"])
+			neededModules.add(self.PM.getParameterSet(psname)[".moduleID"])
 		
-		main.tmp_run_modules = sorted(neededModules)
-		print(f"[main run] Needed modules: {main.tmp_run_modules}")
-		main.tmp_run_modules_index = 0
-		main.nextPPTModule()
+		self.tmp_run_modules = sorted(neededModules)
+		print(f"[main run] Needed modules: {self.tmp_run_modules}")
+		self.tmp_run_modules_index = 0
+		self.nextPPTModule()
 	
-	def nextPPTModule(main):
-		if main.tmp_run_modules is None or main.tmp_run_modules_index is None:return False
-		if main.tmp_run_modules_index >= len(main.tmp_run_modules):	#ran all modules
-			main.tmp_run_modules = None
-			main.tmp_run_modules_index = None
+	def nextPPTModule(self):
+		if self.tmp_run_modules is None or self.tmp_run_modules_index is None:return False
+		if self.tmp_run_modules_index >= len(self.tmp_run_modules):	#ran all modules
+			self.tmp_run_modules = None
+			self.tmp_run_modules_index = None
 			
-			pipetime = time.time() - main.pipeStartTime
+			pipetime = time.time() - self.pipeStartTime
 			if pipetime <300:timeText = f"{int(pipetime)} seconds"
 			elif pipetime<11700:timeText = f"{round(pipetime/60,1)} minutes"
 			else:timeText = f"{round(pipetime/3600,1)} hours"
-			main.writeLog("-"*100,terminalPrefix="---")
-			main.writeLog(f"Processing all files done in {timeText}.",terminalPrefix="[Main] ")
-			main.writeLog("-"*100,terminalPrefix="---")
+			self.writeLog("-"*100,terminalPrefix="---")
+			self.writeLog(f"Processing all files done in {timeText}.",terminalPrefix="[Main] ")
+			self.writeLog("-"*100,terminalPrefix="---")
 			
-			main.saveSettings()
-			main.loadDataIntoGUI()
+			self.saveSettings()
+			self.loadDataIntoGUI()
+			self.exportGraphs()
+			self.isPipelineRunning = False
 		else:
-			module = main.tmp_run_modules[main.tmp_run_modules_index]
-			main.tmp_run_modules_index+=1
+			module = self.tmp_run_modules[self.tmp_run_modules_index]
+			self.tmp_run_modules_index+=1
 			try:
-				main.moduleDict[module].process(main)
+				self.moduleDict[module].process(self)
 			except Exception as e:
-				main.writeError(f"[Error][Func] Processing module \"{main.moduleDict[module].moduleID}\" does not implement the function \"process(main)\".")
-				main.writeError(f"[Error][Func] Or a different error occured during execution:")
-				main.writeError(str(e))
+				self.writeError(f"[Error][Func] Processing module \"{self.moduleDict[module].moduleID}\" does not implement the function \"process(main)\".")
+				self.writeError(f"[Error][Func] Or a different error occured during execution:")
+				self.writeError(str(e))
 	
 	def runCommand(self,stepID,commands,reqFiles,genFiles,libIDs,stdoutFiles=None,stderrFiles=None,grep=[],grepRequireOr=[],force=False,libraries=None):	#new thread
 		if force:
@@ -226,19 +231,19 @@ class Main():
 		else:
 			self.killSignal[0] = False
 			return False
-	def openManual(main):
+	def openManual(self):
 		try:
 			system=platform.system()
 			if system=="Darwin":
-				subprocess.call(("open",os.path.join(main.execPath,"Manual.pdf")))
+				subprocess.call(("open",os.path.join(self.execPath,"Manual.pdf")))
 			elif system=="Windows":
-				os.startfile(os.path.join(main.execPath,"Manual.pdf"))
+				os.startfile(os.path.join(self.execPath,"Manual.pdf"))
 			else:
-				subprocess.call(("xdg-open",os.path.join(main.execPath,"Manual.pdf")))
+				subprocess.call(("xdg-open",os.path.join(self.execPath,"Manual.pdf")))
 		except Exception as e:
-			main.writeError(str(e))
-			main.writeError("Problem with opening the Manual.")
-			main.writeError("You can instead find it in the program directory and open it manually.")
+			self.writeError(str(e))
+			self.writeError("Problem with opening the Manual.")
+			self.writeError("You can instead find it in the program directory and open it manually.")
 
 def launch(execPath=None):
 	Main("RNAival - None",execPath=execPath).mainWindow.mainloop()

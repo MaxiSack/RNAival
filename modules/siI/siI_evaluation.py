@@ -11,12 +11,7 @@ from graphs.drawGraphics import interpolateColoursFraction
 
 from .static import moduleID
 
-def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
-	
-	if gui:main.writeLog("\n-------------------------------------------------------\nLoading siI data into GUI")
-	else:main.writeLog("\n-------------------------------------------------------\nLoading siI data")
-	
-		
+def loadDataIntoGUI(main,libPairs,params,tableParams=None):
 	length = params["siI-siRNAlength"]
 	strandStr = params["siI-strand"]
 	if strandStr=="reverse":strand=1
@@ -24,7 +19,7 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 	elif strandStr == "both":
 		main.writeError("\"Both\" is currently not supported for siI.")
 		return
-	print("[siI eval] Loading graphics")
+	#print("[siI eval] Loading graphics")
 	hideLabels = main.PM.get("RNAival-hide_Labels_Legends")
 	for pair in libPairs:	#[(libPos,libNeg,label,TPS,start,end)]	#TPS = (bundleID,psname)
 		libIDs = pair[0]+pair[1]
@@ -38,6 +33,9 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			continue
 		
 		targetBundle = main.IM.getTarget(bundleID)
+		if targetBundle.mainSeqID is None or targetBundle.mainSequence is None:	#None if bundle is invalid (because of missing file)
+			main.writeWarning(f"Target {bundleID} is invalid, skipping libraries {libIDs}",terminalPrefix="[siI]")	#skip if target is None (invalid)
+			continue
 		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
 		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
 		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",bundleID,psname)
@@ -197,13 +195,20 @@ def loadDataIntoGUI(main,libPairs,params,gui=True,export=True):
 			main.comboGraphs[graphKeyA+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyV+"_"+psname])
 			main.comboGraphs[graphKeyV+"_"+psname].addConnectedGraph(main.comboGraphs[graphKeyA+"_"+psname])
 		
-		bestSiRNAsRev = sorted(pointDescriptor, key = lambda x:x[-1],reverse=True)
-		filename = os.path.join(countDir,pairLabel+f"_siRNA-candidates_l{length}-s{strand}_{regionStart}-{regionEnd}.tsv")
-		with open (filename,"w") as fr:
-			fr.write("\t".join(descriptorFields)+"\n")
-			for point in bestSiRNAsRev:
-				fr.write("\t".join([str(v) for v in point])+"\n")
-		
+		#---------------------- Create tabular output -------------------
+		if not tableParams is None:
+			bestSiRNAsRev = sorted(pointDescriptor, key = lambda x:x[-1],reverse=True)
+			if tableParams["siI-siRNACandidatesGUI"]:
+				main.writeTextOutput("\n"+"\t".join(descriptorFields[0:10]+[descriptorFields[-1]]))
+				main.writeTextOutput("\n".join(
+					["\t".join([str(v) for v in bestSiRNAsRev[i][0:10]+[bestSiRNAsRev[i][-1]]]) for i in range(tableParams["siI-siRNACandidatesAmount"])]))
+			
+			if tableParams["siI-siRNACandidatesFile"]:
+				filename = os.path.join(countDir,pairLabel+f"_siRNA-candidates_l{length}-s{strand}_{regionStart}-{regionEnd}.tsv")
+				with open (filename,"w") as fr:
+					fr.write("\t".join(descriptorFields)+"\n")
+					for point in bestSiRNAsRev:
+						fr.write("\t".join([str(v) for v in point])+"\n")
 	
 	main.writeLog("done.\n")
 	return True

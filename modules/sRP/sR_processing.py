@@ -195,7 +195,7 @@ def createIndexPipe(main,parameters,force=False):
 		Path(os.path.join(indexDir,indexID)).mkdir(parents=True, exist_ok=True)
 		targetList = list()
 		for i,target in enumerate(main.IM.getTarget(target).fastaList):
-			reqFiles[f"$target-{indexID}-{i}"] = f"{target}"
+			reqFiles[f"$target-{indexID}-{i}"] = f"{os.path.join(main.PM.get("projectPath"),target) if target.startswith("fasta") else target}"
 			targetList.append(f"$target-{indexID}-{i}")
 		
 		#needs the --quiet option or the massive stdout clogs up the pipe

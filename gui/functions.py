@@ -134,6 +134,10 @@ def loadProject(main,pp):
 					_,parameterDict,_,inputDict = json.loads(jsonstr)
 			
 			main.PM.setAll(parameterDict)
+			if not main.PM.get("projectPath") == pp:
+				main.writeWarning("Projectpath missmatch, using the current path instead.")
+				main.PM.set("projectPath",pp)
+			
 			main.PM.loadParameterSets()
 			main.IM.setAll(inputDict,main=main)
 			updateTargetListFrame(main)
@@ -271,7 +275,7 @@ def displayGraphs(main):
 	print("\n[main func] Displaying graphs")
 	main.writeLog("\n-------------------------------------------------------\nDisplaying graphs")
 	if main.comboGraphs is None or len(main.comboGraphs.keys())==0:
-		main.writeWarning("Nothing to display")
+		main.writeWarning("No graphs selected, nothing to display")
 		return False
 		
 	if not main.PM.validateTags(["graphics"]):

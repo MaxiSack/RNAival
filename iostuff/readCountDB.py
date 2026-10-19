@@ -13,8 +13,14 @@ class ReadCountsDatabase:
 		self.readCounts[libID][strand][length][position-1] = count
 	
 	def getReadCount(self,libID,strand,length,position):
-		if self.readCounts[libID][strand][length] is None: return 0
-		return self.readCounts[libID][strand][length][position-1]
+		try:
+			if self.readCounts[libID][strand][length] is None: return 0
+			return self.readCounts[libID][strand][length][position-1]
+		except Exception as e:
+			print(f"[RCDB] Error, invalid access: {libID} {strand} {length} {position-1}")
+			#print(e)
+			#return self.readCounts[libID][strand][length][position-1]
+			return 0
 	
 	def getLengthCount(self,libID,strand,length):
 		if libID in self.readCounts and not self.readCounts[libID][strand][length] is None:

@@ -155,6 +155,7 @@ class StyleManager:
 			self.mystyle.configure("Header.TLabel",font=self.main.headerfont)
 			self.mystyle.configure("Medium.TLabel",font="System 14 bold")
 			self.mystyle.configure("TEST.TLabel",background="#ff0000")
+			self.mystyle.configure("Button.TLabel",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour)
 			self.mystyle.configure("TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="raised",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")
 			self.mystyle.map("TButton",background=[("active",self.buttonHighlightColour)])
 			self.mystyle.configure("Selected.TButton",font=self.main.buttonTextFont,foreground=self.buttonTextColour,background=self.buttonColour,relief="sunken",borderwidth=self.main.frameBorderSize-1)#,lightcolor="DarkGreen",darkcolor="LightGreen")

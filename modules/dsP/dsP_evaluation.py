@@ -1,107 +1,113 @@
 
 import os.path
+from pathlib import Path
 
 from .loadGraphs import loadGraphs
 from functions.baseFunctions import getReverseSeq
 from iostuff.loadCounts import loadCounts
 
-# execution related functions ---------------------------------------------------------------
-
-def giveTextOutput(basegui,countData,resultDir,selectedLibIDs,export=True):	#TODO update this to the new system
-	#if export:
-	#	Path(resultDir).mkdir(parents=True, exist_ok=True)	#make a extra dir for text output
-	#	resultDir = os.path.join(main.PM.get("projectPath"),"~Output",bundleID,psname)
-	#	Path(resultDir).mkdir(parents=True, exist_ok=True)
-	
-	#---------------------- Create tabular output -------------------
-	print("[siGUI] Writing esiRNA expression stats")
-	#ID	pos	strand	length	count	c/c@len	c/c@pos
-	header = "ID\tpos\tstrand\tlength\tcount\tc/c@len\tc/c@pos\tsequence"
-	outText = ""+header
-	for libID in selectedLibIDs:
-		outText+="\n"+libID
-		esiList = list()
-		for strand in [0,1]:
-			for esiRNA in basegui.annotation[strand]:	#start	length	label
-				#print(esiRNA)
-				#if "_gs" in esiRNA[2] or "_ps" in esiRNA[2]:
-				if esiRNA[4] == "Guide" or esiRNA[4] == "Passenger":
-					try:
-						totalOfLength = countData.getLengthCount(libID,0,esiRNA[1])+countData.getLengthCount(libID,1,esiRNA[1])
-						count = countData.getReadCount(libID,strand,esiRNA[1],esiRNA[0]-strand*(esiRNA[1]-1))
-						totalPos = countData.getPosCount(libID,strand,esiRNA[0])
-						siSeq = basegui.constructSeq[esiRNA[0]-1:esiRNA[0]+esiRNA[1]-1]
-						if strand==1: siSeq = getReverseSeq(basegui.constructSeq[esiRNA[0]-esiRNA[1]:esiRNA[0]],main=basegui)
-						esiList.append([esiRNA[2],str(esiRNA[0]),"sense" if strand==0 else "anti",str(esiRNA[1]),str(count),
-							str(0 if totalOfLength==0 else round(count/totalOfLength,5)),str(0 if totalPos==0 else round(count/totalPos,5)),
-							siSeq])
-					except Exception as e:
-						print(e)
-						print("error with esiRNA annotation: "+str(esiRNA)) #?????
-		tmpText = ""+header
-		for stats in esiList:
-			tmpText+="\n"+"\t".join(stats)
-		outText+="\n"+tmpText
-		
-		if export:
-			with open(os.path.join(resultDir,libID+"_esiRNA.tsv"),"w") as esiWriter:
-				esiWriter.write(tmpText)
-	basegui.writeTextOutput(outText)
-	print("Done")
-	
-	print("[siGUI] Writing esiRNA degradation stats")
-	for libID in selectedLibIDs:
-		#length	esi1_gs-5	esi1_gs-3	esi1_ps-5	esi1_ps-3
-		header = "\nlength"
-		for strand in [0,1]:
-			for esiRNA in basegui.annotation[strand]:	#start	length	label
-				if "_gs" in esiRNA[2] or "_ps" in esiRNA[2]:
-					header+="\t"+esiRNA[2]+"-5\t"+esiRNA[2]+"-3"
-		outText = ""+header
-		for lenOffset in range(5,-6,-1):	# parameter
-			outText+="\n"+str(21+lenOffset)	#
+def writeRNAExpressionStats(main,resultDir,countData,libIDs,bundleTarget,dsP_RNAExpressionGUI = True,dsP_RNAExpressionFile = True):
+	if dsP_RNAExpressionGUI or dsP_RNAExpressionFile:
+		print("[siGUI] Writing RNA expression stats...",end="")
+		header = "libID\tRNA-ID\tpos\tstrand\tlength\tcount\tc/c@len\tc/c@pos\tsequence"
+		if dsP_RNAExpressionGUI:main.writeTextOutput(header)
+		for libID in libIDs:
+			libText=""
 			for strand in [0,1]:
-				for esiRNA in basegui.annotation[strand]:	#start	length	label
-					#if "_gs" in esiRNA[2] or "_ps" in esiRNA[2]:
-					if esiRNA[4] == "Guide" or esiRNA[4] == "Passenger":
+				for RNA_annot in bundleTarget.annotation[strand]:
+					if RNA_annot[4] == "Guide" or RNA_annot[4] == "Passenger":
 						try:
-							count5p = countData.getReadCount(libID,strand,esiRNA[1]+lenOffset,esiRNA[0]-strand*(esiRNA[1]-1+lenOffset))
-							count3p = countData.getReadCount(libID,strand,esiRNA[1]+lenOffset,esiRNA[0]-(1-strand)*(lenOffset)-strand*(esiRNA[1]-1))
-							outText+="\t"+str(count5p)+"\t"+str(count3p)
-						except:
-							print("error with esiRNA annotation: "+str(esiRNA))
-		#basegui.writeTextOutput(outText)
-		if export:
-			with open(os.path.join(resultDir,libID+"_esiRNA_degrade.tsv"),"w") as esiWriter:
-				esiWriter.write(outText)
-	print("Done")
+							totalOfLength = countData.getLengthCount(libID,0,RNA_annot[1])+countData.getLengthCount(libID,1,RNA_annot[1])
+							count = countData.getReadCount(libID,strand,RNA_annot[1],RNA_annot[0]-strand*(RNA_annot[1]-1))
+							totalPos = countData.getPosCount(libID,strand,RNA_annot[0])
+							if strand==1: sequence = getReverseSeq(bundleTarget.mainSequence[RNA_annot[0]-RNA_annot[1]:RNA_annot[0]],main=main)
+							else: sequence = bundleTarget.mainSequence[RNA_annot[0]-1:RNA_annot[0]+RNA_annot[1]-1]
+							stats=[
+								libID,
+								RNA_annot[3],
+								str(RNA_annot[0]),
+								"sense" if strand==0 else "anti",
+								str(RNA_annot[1]),
+								str(count),
+								str(0 if totalOfLength==0 else round(count/totalOfLength,5)),
+								str(0 if totalPos==0 else round(count/totalPos,5)),
+								sequence]
+							libText+="\n"+"\t".join(stats)
+						except Exception as e:
+							print(e)
+							print("error with esiRNA annotation: "+str(RNA_annot))
+			if dsP_RNAExpressionGUI:main.writeTextOutput(libText)
+			if dsP_RNAExpressionFile:
+				with open(os.path.join(resultDir,libID+"_esiRNA.tsv"),"w") as esiWriter:
+					esiWriter.write(header+libText)
+		print("done.")
 
-def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highlightStyles=None):
+def writeRNADegradeStats(main,resultDir,countData,libIDs,bundleTarget,dsP_RNADegradeGUI = True,dsP_RNADegradeFile = True,dsP_RNADegrade_min = 15,dsP_RNADegrade_max = 17):
+	if dsP_RNADegradeGUI or dsP_RNADegradeFile:
+		print("[siGUI] Writing esiRNA degradation stats...",end="")
+		for libID in libIDs:
+			if dsP_RNADegradeGUI:main.writeTextOutput(f"\n{libID}")
+			header = "length"
+			for strand in [0,1]:
+				for esiRNA in bundleTarget.annotation[strand]:
+					if esiRNA[4] == "Guide" or esiRNA[4] == "Passenger":
+						header+="\t"+esiRNA[3]+"-5\t"+esiRNA[3]+"-3"
+			outText = ""+header
+			for length in range(dsP_RNADegrade_max,dsP_RNADegrade_min-1,-1):
+				outText+="\n"+str(length)
+				for strand in [0,1]:
+					for esiRNA in bundleTarget.annotation[strand]:
+						if esiRNA[4] == "Guide" or esiRNA[4] == "Passenger":
+							try:
+								count5p = countData.getReadCount(libID,strand,length,esiRNA[0]-strand*(length-1))
+								count3p = countData.getReadCount(libID,strand,length,esiRNA[0]+(1-strand)*(esiRNA[1]-length)-strand*(esiRNA[1]-1))
+								outText+="\t"+str(count5p)+"\t"+str(count3p)
+							except:
+								print("error with esiRNA annotation: "+str(esiRNA))
+			if dsP_RNADegradeGUI:main.writeTextOutput(outText)
+			if dsP_RNADegradeFile:
+				with open(os.path.join(resultDir,libID+"_esiRNA_degrade.tsv"),"w") as esiWriter:
+					esiWriter.write(outText)
+		print("done.")
+
+def getGrouping(main,selectedLibIDs):
 	grouping = dict()
 	for libID in selectedLibIDs:
 		try:
 			for target in main.IM.getLib(libID).getCountfiles():	#target = (bundleID,psname)
 				if not target[1] == main.IM.getLib(libID).ppt:continue	#only draw the currently selected Parameterset
+				if not target[0] == main.IM.getLib(libID).getSelectedTarget():continue	#only draw the currently selected target
 				if not target in grouping:grouping[target] = list()
 				grouping[target].append(libID)
 		except:
 			print(f"Error, problem with finding targets for {libID}: {main.IM.getLib(libID).getCountfiles()}")
+	return grouping
+
+def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,highlightStyles=None,tableParams=None):
+	grouping = getGrouping(main,selectedLibIDs)
 		
 	#print(f"\n[dsP eval] Groups: \n"+"\n".join([f"{key}:\t{value}" for key,value in sorted(grouping.items())])+"\n")
 	for (bundleID,psname),libIDs in sorted(grouping.items()):
-		
+		resultDir = os.path.join(main.PM.get("projectPath"),"Graphics",bundleID,psname)
+		Path(resultDir).mkdir(parents=True, exist_ok=True)
+		#print(f"[Debug][dsP] Group: {bundleID}-{psname}, {libIDs}
 		countDir = os.path.join(main.PM.get("projectPath"),"Counts",bundleID,psname)
 		countFile = os.path.join(countDir,"$libID_readcounts.tsv")
 		#print(f"[dsP eval] Countfile: {countFile}")
-		countData = loadCounts(main,countFile,libIDs,main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).mainLength)
+		bundleTarget = main.IM.getTarget(bundleID)
+		if bundleTarget.mainSeqID is None or bundleTarget.mainSequence is None:	#None if bundle is invalid (because of missing file)
+			main.writeWarning(f"Target {bundleID} is invalid, skipping libraries {libIDs}",terminalPrefix="[dsP]")	#skip if target is None (invalid)
+			continue
+		countData = loadCounts(main,countFile,libIDs,bundleTarget.mainLength)
 		if countData is None or countData is False: 
 			print("Error, data is None!")
 			main.writeError("Error while reading counts from file! {countFile}")
 			continue
 		
+		#---------------------- Prepare graphs -------------------
 		siRNAPos = [dict(),dict()]	#TODO this is somewhat redundant with annotation
-		if not main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation is None:
-			for strand,entrylist in enumerate(main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation):
+		if not bundleTarget.annotation is None:
+			for strand,entrylist in enumerate(bundleTarget.annotation):
 				for feature in entrylist:
 					#start,length,class,id,ps/gs,label
 					#if "gs" in feature[2] or "ps" in feature[2]:
@@ -111,13 +117,22 @@ def loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,gui=True,export=True,highli
 						#print(feature[1])
 						pass
 		for dic in wantedgraphs:
-			dic["mainTargetSeqID"] = main.IM.getTarget(bundleID).mainSeqID	#mainTarget
+			dic["mainTargetSeqID"] = bundleTarget.mainSeqID	#mainTarget
 			dic["bundleID"] = bundleID
 			dic["psname"] = psname
 		#TODO fix highlightStyles, do we still need that?	highlightStyles is used to colour the bars, cols from graphdef is used for the legend. ????
-		loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=main.IM.getTarget(main.IM.getLib(libIDs[0]).mapTargets[0]).annotation,highlightStyles=highlightStyles)
+		if len(wantedgraphs)>0:
+			loadGraphs(main,countData,libIDs,wantedgraphs,siRNAPos,annotation=bundleTarget.annotation,highlightStyles=highlightStyles)
 		
-		#giveTextOutput(main,countData,resultDir,selectedLibIDs,export=export)	#TODO doesnt work right now
-		
-	#if gui:displayGraphs(main)
+		#---------------------- Create tabular output -------------------
+		if not tableParams is None:
+			writeRNAExpressionStats(main,resultDir,countData,libIDs,bundleTarget,
+				dsP_RNAExpressionGUI = tableParams["dsP-RNAExpressionGUI"],
+				dsP_RNAExpressionFile = tableParams["dsP-RNAExpressionFile"])
+			
+			writeRNADegradeStats(main,resultDir,countData,libIDs,bundleTarget,
+				dsP_RNADegradeGUI = tableParams["dsP-RNADegradeGUI"],
+				dsP_RNADegradeFile = tableParams["dsP-RNADegradeFile"],
+				dsP_RNADegrade_min = tableParams["dsP-RNADegrade_min"],
+				dsP_RNADegrade_max = tableParams["dsP-RNADegrade_max"])
 	return True

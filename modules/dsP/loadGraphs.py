@@ -74,6 +74,10 @@ def readAnnotation(annotation):	#TODO what if anntoation not "nice" or even corr
 	return highlighting,xLabels
 
 def addGraph_annotCount(main,graphDef,libIDs,db,siRNAPos,annotation=None,highlightStyles=None):
+	if len(siRNAPos[0])==0:
+		main.writeWarning("Graph RNA annotation counts was selected, but the embl contains no annotation.")
+		return
+	
 	doPercent=graphDef["percent"]
 	
 	highlighting,xLabels = readAnnotation(annotation)
@@ -170,9 +174,9 @@ def addGraph_singleLengthCounts(main,graphDef,libIDs,db,annotation=None,highligh
 		else:
 			legend=None
 	
-	graphKey = f"Read-Counts"+("_percent" if doPercent else "")
-	graphTitle = f"Read Counts"
-	tabName = f"Read Counts"+(" (percent)" if doPercent else "")
+	graphKey = f"Read-Counts-{targetLen}"+("_percent" if doPercent else "")
+	graphTitle = f"Read Counts of {targetLen}-nt long reads"
+	tabName = f"Read Counts {targetLen}"+(" (percent)" if doPercent else "")
 	graph = Combograph(main,graphTitle,graphDef["mainTargetSeqID"]+"_"+graphDef["psname"]+"_"+moduleID,graphType="BAR2",
 		legend=legend,positionalColouring=highlighting,styles=highlightStyles,xlab=graphDef["xlab"],ylab=graphDef["ylab"],
 		fileName=graphKey,tabName=tabName)
@@ -317,12 +321,17 @@ def addGraph_coverage(main,graphDef,libIDs,db):	#Unused
 	main.comboGraphs[graphKey+graphDef["bundleID"]+graphDef["psname"]] = graph
 
 def addGraph_heatmap(main,graphDef,libIDs,db,annotation=None,highlightStyles=None):
+	
 	graphList = list()
 	highlightEsis=graphDef["highlightEsis"]
 	highlightFrames=graphDef["highlightFrames"]
 	minL=graphDef["minLen"]
 	maxL=graphDef["maxLen"]
 	midpointPercentile=graphDef["middlePercentile"]
+	
+	if db.seqLen <= maxL:
+		main.writeWarning("Heatmap selected, but target length is too short.")
+		return
 	
 	for libID in libIDs:
 		heatmap = list()	#pos x [rev,-1,for]
@@ -375,7 +384,7 @@ def getGraphKey(graphDef):
 	if graphDef[0]=="startPos":
 		doPercent=graphDef["percent"]
 		targetLen=graphDef["targetlen"]
-		graphKey = f"Read-Counts"+("_percent" if doPercent else "")
+		graphKey = f"Read-Counts-{targetLen}"+("_percent" if doPercent else "")
 	elif graphDef[0]=="singleCov":
 		targetLen=graphDef["targetlen"]
 		graphKey = f"Coverage-{targetLen}"

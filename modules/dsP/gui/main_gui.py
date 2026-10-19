@@ -190,12 +190,9 @@ def getWantedgraphs(main):
 	
 	return wantedgraphs
 
-def loadData(main,export=True,gui=True):
+def loadData(main,writeTableOutput=False):
 	# ------------------- Graph definition -------------------
 	wantedgraphs = getWantedgraphs(main)
-	if not wantedgraphs: 
-		main.writeError("Error with graph definitions!")
-		return False
 	#print("[dsP Debug] wanted graphs:\n"+str("\n".join(["\t"+str(graph) for graph in wantedgraphs])))
 	
 	# ------------------- Library Selection -----------------------
@@ -203,8 +200,13 @@ def loadData(main,export=True,gui=True):
 	#print(f"Selected Libraries:\n{selectedLibIDs}")
 	
 	highlightStyles=getColours(main)
-	return loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,export=export,highlightStyles=highlightStyles,gui=gui)
-
+	
+	tableParams=main.PM.getDict(tag="dsP-tables")
+	if writeTableOutput:	#when pipelineRun, always write tables and load in GUI
+		for key in tableParams.keys():
+			tableParams[key]=True
+	
+	return loadDataIntoGUI(main,wantedgraphs,selectedLibIDs,highlightStyles=highlightStyles,tableParams=tableParams)
 
 def deleteLenCovColPair(main,index):
 	main.dsP_multiCovPairListWidgets[index][0].destroy()
@@ -472,15 +474,15 @@ def add_dsP_eval_GUI(main):
 	dsP_globalSettings.pack(fill="both",pady=(0,main.frameBorderSize*2))
 	ThemedLabel(dsP_globalSettings,text="Global settings",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=4,sticky="w",padx=main.frameBorderSize)
 	
-	ThemedLabel(dsP_globalSettings,text="Synchronise Y-Axes between graphs",anchor="w").grid(column=0,row=2,columnspan=3,sticky="ew",padx=main.frameBorderSize)
+	ThemedLabel(dsP_globalSettings,text="Synchronise Y-Axes between graphs",anchor="w").grid(column=0,row=1,columnspan=3,sticky="ew",padx=main.frameBorderSize)
 	createTogglebutton(main,dsP_globalSettings,main.PM.add("dsP-_globalYScale","bool",False,
-		"boolerror","Wether to synchronise Y-Axes between graphs of the same type",tag="dsP-general")).grid(column=3,row=2,sticky="e")
+		"boolerror","Wether to synchronise Y-Axes between graphs of the same type",tag="dsP-general")).grid(column=3,row=1,sticky="e")
 	
-	ThemedLabel(dsP_globalSettings,text="Y-Axes (where applicable):",anchor="w").grid(column=0,row=3,columnspan=1,sticky="ew",padx=main.frameBorderSize)
+	ThemedLabel(dsP_globalSettings,text="Y-Axes (where applicable):",anchor="w").grid(column=0,row=2,columnspan=1,sticky="ew",padx=main.frameBorderSize)
 	strandVar = main.PM.add("dsP-_yaxis","text","abundance","Stringerror","Yaxis shows abundance, percent or make both graphs",tag="dsP-general")
-	ThemedRadioButton(dsP_globalSettings,text="Abundance",variable=strandVar,value="abundance").grid(column=1,row=3,sticky="ew",padx=main.frameBorderSize)
-	ThemedRadioButton(dsP_globalSettings,text="Percent",variable=strandVar,value="percent").grid(column=2,row=3,sticky="ew",padx=main.frameBorderSize)
-	ThemedRadioButton(dsP_globalSettings,text="Both",variable=strandVar,value="both").grid(column=3,row=3,sticky="ew",padx=main.frameBorderSize)
+	ThemedRadioButton(dsP_globalSettings,text="Abundance",variable=strandVar,value="abundance").grid(column=1,row=2,sticky="ew",padx=main.frameBorderSize)
+	ThemedRadioButton(dsP_globalSettings,text="Percent",variable=strandVar,value="percent").grid(column=2,row=2,sticky="ew",padx=main.frameBorderSize)
+	ThemedRadioButton(dsP_globalSettings,text="Both",variable=strandVar,value="both").grid(column=3,row=2,sticky="ew",padx=main.frameBorderSize)
 	
 	dsP_globalSettings.rowconfigure(0,weight=0)
 	dsP_globalSettings.rowconfigure(1,weight=0)
@@ -520,8 +522,42 @@ def add_dsP_eval_GUI(main):
 	colourOptionsFrame.rowconfigure(3,weight=0)
 	colourOptionsFrame.rowconfigure(4,weight=0)
 	
+	# ---------------- output table settings ---------------------
+	dsP_tableSettings = ThemedFrame(graphSettingsColumn_3)
+	dsP_tableSettings.pack(fill="both",pady=(0,main.frameBorderSize*2))
+	ThemedLabel(dsP_tableSettings,text="Result table settings",anchor="w",style="Medium.TLabel").grid(column=0,row=0,columnspan=4,sticky="w",padx=main.frameBorderSize)
 	
-	colourOptionsFrame = ThemedFrame(graphSettingsColumn_3)
+	ThemedLabel(dsP_tableSettings,text="Load RNA abundance stats into GUI",anchor="w").grid(column=0,row=1,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,dsP_tableSettings,main.PM.add("dsP-RNAExpressionGUI","bool",True,
+		"boolerror","Load RNA abundance stats into GUI; may crowd the textoutput",tag="dsP-tables")).grid(column=2,row=1,sticky="e")
+	ThemedLabel(dsP_tableSettings,text="Write RNA abundance stats on reaload",anchor="w").grid(column=0,row=2,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,dsP_tableSettings,main.PM.add("dsP-RNAExpressionFile","bool",False,
+		"boolerror","Write RNA abundance stats on reaload; whenever graphs are loaded into the GUI; only done during pipeline runs by default",
+		tag="dsP-tables")).grid(column=2,row=2,sticky="e")
+	ThemedLabel(dsP_tableSettings,text="Load RNA degradation stats into GUI",anchor="w").grid(column=0,row=3,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,dsP_tableSettings,main.PM.add("dsP-RNADegradeGUI","bool",False,
+		"boolerror","Load RNA degradation stats into GUI; may crowd the textoutput",tag="dsP-tables")).grid(column=2,row=3,sticky="e")
+	ThemedLabel(dsP_tableSettings,text="Write RNA degradation stats on reload",anchor="w").grid(column=0,row=4,sticky="ew",padx=main.frameBorderSize)
+	createTogglebutton(main,dsP_tableSettings,main.PM.add("dsP-RNADegradeFile","bool",False,
+		"boolerror","Write RNA degradation stats on reaload; whenever graphs are loaded into the GUI; only done during pipeline runs by default",
+		tag="dsP-tables")).grid(column=2,row=4,sticky="e")
+	ThemedLabel(dsP_tableSettings,text="RNA lengths to investigate",anchor="w").grid(column=0,row=5,sticky="ew",padx=main.frameBorderSize)
+	ThemedEntry(dsP_tableSettings,textvariable=main.PM.add("dsP-RNADegrade_min","int",15,
+		"RNADegrade_min needs to be an integer!","Minimum length for RNA degradation analysis",tag="dsP-tables")).grid(
+			column=1,row=5,sticky="e",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
+	ThemedEntry(dsP_tableSettings,textvariable=main.PM.add("dsP-RNADegrade_max","int",27,
+		"RNADegrade_max needs to be an integer!","Maximum length for RNA degradation analysis",tag="dsP-tables")).grid(
+			column=2,row=5,sticky="e",padx=main.frameBorderSize,pady=(0,main.frameBorderSize))
+	
+	dsP_tableSettings.rowconfigure(0,weight=0)
+	dsP_tableSettings.rowconfigure(1,weight=0)
+	dsP_tableSettings.rowconfigure(2,weight=0)
+	dsP_tableSettings.rowconfigure(3,weight=0)
+	dsP_tableSettings.rowconfigure(4,weight=0)
+	dsP_tableSettings.columnconfigure(0,weight=1)
+	dsP_tableSettings.columnconfigure(1,weight=0)
+	dsP_tableSettings.columnconfigure(2,weight=0)
+	
 	ThemedButton(graphSettingsColumn_3,text="Reset to defaults",command=lambda main=main: resetDSP(main),style="Exit.TButton").pack(fill="both",pady=(0,main.frameBorderSize*2))
 	
 	#column_1_buffer
